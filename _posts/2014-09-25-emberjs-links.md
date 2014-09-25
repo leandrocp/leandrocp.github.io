@@ -16,8 +16,8 @@ title: Ember.js - Links para Iniciantes
 
 ### Tutoriais e Exemplos
 
-* (http://builtwithember.io/)
-* http://ember.vicramon.com/
+* [http://builtwithember.io/]
+* [http://ember.vicramon.com/]
 * https://github.com/discourse/discourse
 * http://helabs.com.br/blog/2014/08/29/construindo-um-cliente-de-reddit-com-emberjs/
 * http://hashrocket.com/blog/posts/ember-routing-the-when-and-why-of-nesting
