@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Ember.js - Links para Iniciantes
+title: Ember.js - Links
 ---
 
 ### Oficial
@@ -10,8 +10,12 @@ title: Ember.js - Links para Iniciantes
 * [Emberjs Forum](http://discuss.emberjs.com/)
 * [ember-cli](http://www.ember-cli.com/)
 * [Handlebarsjs](http://handlebarsjs.com/)
+* [HTMLBars](https://github.com/tildeio/htmlbars)
 * [npmjs](https://www.npmjs.org/)
 * [bower](http://bower.io/search/)
+
+### Livros
+* http://balinterdi.com/rock-and-roll-with-emberjs/
 
 ### Tutoriais e Exemplos
 * http://builtwithember.io/
@@ -22,6 +26,7 @@ title: Ember.js - Links para Iniciantes
 * http://www.toptal.com/javascript/a-step-by-step-guide-to-building-your-first-ember-js-app
 
 ### Agregadores
+* https://github.com/nmec/awesome-ember
 * http://stackoverflow.com/questions/tagged/ember.js
 * http://www.reddit.com/r/emberjs/
 * https://emberflare.com/entries
