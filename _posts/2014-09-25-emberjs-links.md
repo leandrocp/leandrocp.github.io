@@ -15,7 +15,7 @@ title: Ember.js - Links
 * [bower](http://bower.io/search/)
 
 ### Livros
-* http://balinterdi.com/rock-and-roll-with-emberjs/
+* [Rock And Roll with Emberjs](http://balinterdi.com/rock-and-roll-with-emberjs/)
 
 ### Tutoriais e Exemplos
 * http://builtwithember.io/
@@ -36,11 +36,10 @@ title: Ember.js - Links
 * http://embersherpa.com/cheatsheet/
 
 ### Componentes
+* http://emberobserver.com/
 * http://emberaddons.com/
 * http://ember-components.com/
 * http://addepar.github.io/
-* https://github.com/Myslik/ember-grid
-* https://github.com/dockyard
 
 ### Blogs
 * http://ember.zone/
@@ -62,8 +61,17 @@ title: Ember.js - Links
 * http://blog.balancedpayments.com/getting-started-with-ember.js/
 * http://www.octolabs.com/blogs/octoblog/2014/08/12/supercharge-your-productivity-with-ember-js-that-conference-2014/
 
+### Eventos
+
+#### EmberConf 2014
+* http://confreaks.tv/events/emberconf2014
+
+#### EmberConf 2015
+* http://confreaks.tv/events/emberconf2015
+* https://github.com/poteto/emberconf-2015
+
 ### Videos
-* http://www.confreaks.com/events/emberconf2014
+
 * http://www.embercast.com/
 * http://www.embercasts.com/
 * http://ember101.com/
