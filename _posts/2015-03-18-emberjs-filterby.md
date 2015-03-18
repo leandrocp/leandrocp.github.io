@@ -16,6 +16,8 @@ var alunos = [
   {id: 3, nome: "Maria", nota: 10},
   {id: 4, nome: "Pedro", nota: 5}
 ];
+
+// filterBy(key, value)
 var bonsAlunos = alunos.filterBy('nota', 10);
 
 // Resultado
