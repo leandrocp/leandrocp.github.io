@@ -20,41 +20,41 @@ brew install git
 {% endhighlight %}
 
 * Instale o [VirtualBox](https://www.virtualbox.org/)
-```
+{% highlight bash %}
 brew cask install virtualbox
-```
+{% endhighlight %}
 
 * Instale o [Vagrant](https://www.vagrantup.com/)
-```
+{% highlight bash %}
 brew cask install vagrant
-```
+{% endhighlight %}
 
 * Instale o Docker
-```
+{% highlight bash %}
 brew install docker
-```
+{% endhighlight %}
 
 * Clone o projeto com o sistema pronto
-```
+{% highlight bash %}
 git clone https://github.com/leandrocp/coreos-vagrant.git
 
 cd coreos-vagrant
-```
+{% endhighlight %}
 
 * Inicialize o Vagrant
-```
+{% highlight bash %}
 vagrant up
-```
+{% endhighlight %}
 
 * Aponte o host do docker
-```
+{% highlight bash %}
 export DOCKER_HOST=127.0.0.1:2375
-```
+{% endhighlight %}
 
 * Docker rodando!
-```
+{% highlight bash %}
 docker info
-```
+{% endhighlight %}
 
 A solução é simples: virtualizar um linux que possua docker, apontar o docker local para este ambiente, compartilhar arquivos e finalmente usar o Docker.
 
