@@ -68,7 +68,7 @@ docker run -p 8080:80 nginx
 
 Acesse http://localhost:8080/ para provar que o Docker está ativo e você acabou de executar um servidor web.
 
-** Mas como funciona ?**
+**Mas como funciona ?**
 
 A solução é simples: virtualizar um linux que possua docker, apontar o docker local para este ambiente, compartilhar arquivos e finalmente usar o Docker.
 
