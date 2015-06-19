@@ -9,58 +9,38 @@ O único sistema operacional suportado atualmente é o Linux, porém há formas 
 
 **TL/DR**
 
-Instale os gerenciadores [brew](http://brew.sh/), [cask](https://github.com/caskroom/homebrew-cask) e também o git, caso ainda não tenha:
-
 {% highlight bash %}
+
+# Instale os gerenciadores [brew](http://brew.sh/), [cask](https://github.com/caskroom/homebrew-cask) e também o git, caso ainda não tenha:
 ruby -e "$(curl -fsSL
 https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 brew install caskroom/cask/brew-cask
 
 brew install git
-{% endhighlight %}
 
-Instale o [VirtualBox](https://www.virtualbox.org/)
-
-{% highlight bash %}
+#Instale o [VirtualBox](https://www.virtualbox.org/)
 brew cask install virtualbox
-{% endhighlight %}
 
-Instale o [Vagrant](https://www.vagrantup.com/)
-
-{% highlight bash %}
+# Instale o [Vagrant](https://www.vagrantup.com/)
 brew cask install vagrant
-{% endhighlight %}
 
-Instale o Docker
-
-{% highlight bash %}
+# Instale o Docker
 brew install docker
-{% endhighlight %}
 
-Clone o projeto com o sistema pronto
-
-{% highlight bash %}
+# Clone o projeto com o sistema pronto
 git clone https://github.com/leandrocp/coreos-vagrant.git
 
 cd coreos-vagrant
-{% endhighlight %}
 
-Inicialize o Vagrant
-
-{% highlight bash %}
+# Inicialize o Vagrant
 vagrant up
-{% endhighlight %}
 
-Aponte o host do docker
-
-{% highlight bash %}
+# Aponte o host do docker
+# Dica: coloque este comando no arquivo ~/.bashrc
 export DOCKER_HOST=127.0.0.1:2375
-{% endhighlight %}
 
-Docker rodando!
-
-{% highlight bash %}
+# Docker rodando!
 docker info
 
 docker run -p 8080:80 nginx
