@@ -10,14 +10,14 @@ O único sistema operacional suportado atualmente é o Linux, porém há formas 
 **TL/DR**
 
 * Instale os gerenciadores [brew](http://brew.sh/), [cask](https://github.com/caskroom/homebrew-cask) e também o git, caso ainda não tenha:
-```
+{% highlight bash %}
 ruby -e "$(curl -fsSL
 https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 brew install caskroom/cask/brew-cask
 
 brew install git
-```
+{% endhighlight %}
 
 * Instale o [VirtualBox](https://www.virtualbox.org/)
 ```
