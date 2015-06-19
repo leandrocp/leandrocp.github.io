@@ -11,7 +11,7 @@ O único sistema operacional suportado atualmente é o Linux, porém há formas 
 
 {% highlight bash %}
 
-# Instale os gerenciadores [brew](http://brew.sh/), [cask](https://github.com/caskroom/homebrew-cask) e também o git, caso ainda não tenha:
+# Instale os gerenciadores brew, cask e também o git, caso ainda não tenha:
 ruby -e "$(curl -fsSL
 https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
@@ -19,10 +19,10 @@ brew install caskroom/cask/brew-cask
 
 brew install git
 
-#Instale o [VirtualBox](https://www.virtualbox.org/)
+#Instale o VirtualBox
 brew cask install virtualbox
 
-# Instale o [Vagrant](https://www.vagrantup.com/)
+# Instale o Vagrant
 brew cask install vagrant
 
 # Instale o Docker
