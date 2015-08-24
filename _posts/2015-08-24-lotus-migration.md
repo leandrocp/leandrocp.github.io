@@ -6,12 +6,14 @@ title: Lotus DB Migrations Tips
 Lotus, just like Rails, also supports database migration through [Sequel Migrations](http://sequel.jeremyevans.net/rdoc/files/doc/migration_rdoc.html).
 It´s pretty simple but some things are not so clear.
 
-** Create a migration **
+**Create a migration**
+
 {% highlight bash %}
 lotus g migration create_my_table
 {% endhighlight %}
 
-** Enable UUID (PostgreSQL only) **
+**Enable UUID (PostgreSQL only)**
+
 {% highlight ruby %}
 Lotus::Model.migration do
   up do
@@ -24,7 +26,8 @@ Lotus::Model.migration do
 end
 {% endhighlight %}
 
-** Use UUID as Primary Key **
+**Use UUID as Primary Key**
+
 {% highlight ruby %}
 Lotus::Model.migration do
   up do
@@ -39,7 +42,8 @@ Lotus::Model.migration do
 end
 {% endhighlight %}
 
-** Index a column **
+**Index a column**
+
 {% highlight ruby %}
 Lotus::Model.migration do
   up do
@@ -51,7 +55,8 @@ Lotus::Model.migration do
 end
 {% endhighlight %}
 
-** Table documentation **
+**Table documentation**
+
 {% highlight ruby %}
 Lotus::Model.migration do
   up do
@@ -65,12 +70,14 @@ Lotus::Model.migration do
 end
 {% endhighlight %}
 
-** Migrate up **
+**Migrate up**
+
 {% highlight bash %}
 lotus db migrate
 {% endhighlight %}
 
-** Migrate down **
+**Migrate down**
+
 There´s no `db migrate down` command, although you can specify a version to migrate. Just specify `0` to migrate to initial version (before any migration).
 {% highlight bash %}
 lotus db migrate 0
