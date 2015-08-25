@@ -42,6 +42,19 @@ Lotus::Model.migration do
 end
 {% endhighlight %}
 
+**Use UUID as Foreign Key**
+
+{% highlight ruby %}
+Lotus::Model.migration do
+  up do
+    create_table :my_table do
+      column :id, :uuid, null: false, default: Sequel.function(:uuid_generate_v4), primary_key: true
+      foreign_key :author_id, :authors, type: 'uuid', null: false
+    end
+  end
+end
+{% endhighlight %}
+
 **Index a column**
 
 {% highlight ruby %}
