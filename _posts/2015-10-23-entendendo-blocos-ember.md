@@ -50,8 +50,8 @@ Este comando gera os dois arquivos básicos para o funcionamento de um component
 Vamos focar no segundo. Um novo template de componente possui apenas a instrução `yield`:
 
 {% highlight html %}
-{% raw %}
 <!-- components/mostrar-cliente/template.hbs -->
+{% raw %}
 {{yield}}
 {% endraw %}
 {% endhighlight %}
@@ -59,8 +59,8 @@ Vamos focar no segundo. Um novo template de componente possui apenas a instruç�
 Esta instrução diz que seu componente pode receber um bloco, e que todo código do bloco será inserido neste trecho do `yield`. Confuso ? Exemplo:
 
 {% highlight html %}
-{% raw %}
 <!-- components/mostrar-cliente/template.hbs -->
+{% raw %}
 <h3>Minha lista de clientes:</h3>
 
 {{yield}}
@@ -73,8 +73,8 @@ Esta instrução diz que seu componente pode receber um bloco, e que todo códig
 {% endhighlight %}
 
 {% highlight html %}
-{% raw %}
 <!-- clientes/template.hbs -->
+{% raw %}
 {{#mostrar-cliente}}
 <p>Ordenado por nome</p>
 {{/mostrar-cliente}}
