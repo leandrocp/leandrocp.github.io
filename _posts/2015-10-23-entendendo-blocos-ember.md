@@ -18,12 +18,14 @@ Componentes e helpers utilizados nas views do Ember podem receber blocos, como �
 O que delimita o início e fim de um blocos são os operadores `#` e `/` prefixados ao nome do componente.
 Há casos de componentes que operam tanto com blocos como na versão sem blocos, como é o caso do `link-to`:
 
-{% highlight javascript %}
+{% highlight html %}
+{% raw %}
 {{#link-to 'clientes'}}
   Lista de Clientes
 {{/link-to}}
 
 {{link-to 'Lista de Clientes' 'clientes'}}
+{% endraw %}
 {% endhighlight %}
 
 Os dois formatos renderizam o seguinte HTML:
@@ -46,12 +48,15 @@ o arquivo `.js` onde você programa o comportamento e o arquivo `.hbs` que é o 
 Um novo template de componente possui apenas a instrução `yield`:
 
 {% highlight html %}
+{% raw %}
 {{yield}}
+{% endraw %}
 {% endhighlight %}
 
 Esta instrução diz que seu componente pode receber um bloco, e que todo código do bloco será inserido neste treco do `yield`. Confuso ? Exemplo:
 
 {% highlight html %}
+{% raw %}
 <h3>Minha lista de clientes:</h3>
 
 {{yield}}
@@ -60,12 +65,15 @@ Esta instrução diz que seu componente pode receber um bloco, e que todo códig
   <li>João</li>
   <li>Maria</li>
 </ul>
+{% endraw %}
 {% endhighlight %}
 
 {% highlight html %}
+{% raw %}
 {{#mostrar-cliente}}
 <p>Clientes ativos</p>
 {{/mostrar-cliente}}
+{% endraw %}
 {% endhighlight %}
 
 Resulta no seguinte HTML:
@@ -84,5 +92,7 @@ Repare que o `mostra-cliente` foi chamado com `#` e `/`, ou seja, foi passado um
 Mas nem sempre seu componente precisa aceitar blocos, portanto é seguro remover o `yield` e assim você pode chamar seu componente pela forma simplificada sem passar um bloco:
 
 {% highlight html %}
+{% raw %}
 {{mostrar-cliente}}
+{% endraw %}
 {% endhighlight %}
