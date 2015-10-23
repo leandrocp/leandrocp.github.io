@@ -43,9 +43,11 @@ ember generate component mostrar-cliente
 {% endhighlight %}
 
 Este comando gera os dois arquivos básicos para o funcionamento de um componente:
-o arquivo `.js` onde você programa o comportamento e o arquivo `.hbs` que é o template do componente. Vamos focar no segundo:
 
-Um novo template de componente possui apenas a instrução `yield`:
+* O arquivo `.js` onde você programa o comportament
+* O arquivo `.hbs` que é o template do componente
+ 
+Vamos focar no segundo. Um novo template de componente possui apenas a instrução `yield`:
 
 {% highlight html %}
 {% raw %}
