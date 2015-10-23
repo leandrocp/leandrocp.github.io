@@ -5,12 +5,14 @@ title: Entendendo blocos do Ember - Handlebars
 
 Componentes e helpers utilizados nas views do Ember podem receber blocos, como é o caso do `if`:
 
-{% highlight js %}
+{% highlight html %}
+{% raw %}
 {{#if cliente.ativo}}
   <span class="ativo">Cliente {{cliente.nome}} está ativo</span>
 {{else}}
   <button {{action "ativar"}}>
 {{/if}}
+{% endraw %}
 {% endhighlight %}
 
 O que delimita o início e fim de um blocos são os operadores `#` e `/` prefixados ao nome do componente.
