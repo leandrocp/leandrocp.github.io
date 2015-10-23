@@ -55,7 +55,7 @@ Vamos focar no segundo. Um novo template de componente possui apenas a instruç�
 {% endraw %}
 {% endhighlight %}
 
-Esta instrução diz que seu componente pode receber um bloco, e que todo código do bloco será inserido neste treco do `yield`. Confuso ? Exemplo:
+Esta instrução diz que seu componente pode receber um bloco, e que todo código do bloco será inserido neste trecho do `yield`. Confuso ? Exemplo:
 
 {% highlight html %}
 {% raw %}
