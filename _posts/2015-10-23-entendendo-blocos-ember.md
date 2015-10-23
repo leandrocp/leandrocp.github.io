@@ -5,7 +5,7 @@ title: Entendendo blocos do Ember - Handlebars
 
 Componentes e helpers utilizados nas views do Ember podem receber blocos, como é o caso do `if`:
 
-{% highlight html %}
+{% highlight js %}
 {{#if cliente.ativo}}
   <span class="ativo">Cliente {{cliente.nome}} está ativo</span>
 {{else}}
