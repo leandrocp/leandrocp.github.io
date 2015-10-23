@@ -51,6 +51,7 @@ Vamos focar no segundo. Um novo template de componente possui apenas a instruç�
 
 {% highlight html %}
 {% raw %}
+<!-- components/mostrar-cliente/template.hbs -->
 {{yield}}
 {% endraw %}
 {% endhighlight %}
@@ -59,6 +60,7 @@ Esta instrução diz que seu componente pode receber um bloco, e que todo códig
 
 {% highlight html %}
 {% raw %}
+<!-- components/mostrar-cliente/template.hbs -->
 <h3>Minha lista de clientes:</h3>
 
 {{yield}}
@@ -72,8 +74,9 @@ Esta instrução diz que seu componente pode receber um bloco, e que todo códig
 
 {% highlight html %}
 {% raw %}
+<!-- clientes/template.hbs -->
 {{#mostrar-cliente}}
-<p>Clientes ativos</p>
+<p>Ordenado por nome</p>
 {{/mostrar-cliente}}
 {% endraw %}
 {% endhighlight %}
@@ -82,7 +85,7 @@ Resulta no seguinte HTML:
 
 {% highlight html %}
 <h3>Minha lista de clientes:</h3>
-<p>Clientes ativos</p>
+<p>Ordenado por nome</p>
 <ul>
   <li>João</li>
   <li>Maria</li>
