@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Entendendo blocos do Ember - Handlebars
-categories: ember javascript
+tags: [ember, javascript]
 ---
 
 Componentes e helpers utilizados nas views do Ember podem receber blocos, como é o caso do `if`:

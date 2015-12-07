@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Ember.js - Links
-categories: ember javascript
+tags: [ember, javascript]
 ---
 
 ### Oficial
@@ -90,4 +90,3 @@ categories: ember javascript
 * http://eviltrout.com/ember-tricks/#/slide/1
 * https://speakerdeck.com/xamenrax/ember-dot-js
 * https://speakerdeck.com/kaspertidemann/ember-dot-js-meetup-koblenz-and-neuwied
-
