@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Ember.js - Filter By
+description: Como funciona e como usar o Filter By no Emberjs
 ---
 
 O Ember provê muitos métodos úteis para manipulação de coleção dados (Arrays), você pode ver a lista na documentação do [Enumerable](http://emberjs.com/api/classes/Ember.Enumerable.html).
