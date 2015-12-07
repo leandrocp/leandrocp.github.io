@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Como rodar Docker no MacOS
+description: Configurar o Docker no MacOS, com performance.
 ---
 
 [Docker](https://www.docker.com/) é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura.
