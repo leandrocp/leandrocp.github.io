@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Lotus DB Migrations Tips
+description: Lotus DB Migrations Tips
 ---
 
 Lotus, just like Rails, also supports database migration through [Sequel Migrations](http://sequel.jeremyevans.net/rdoc/files/doc/migration_rdoc.html).
