@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Ember.js - Links
+description: Lista de links Emberjs
 ---
 
 ### Oficial
