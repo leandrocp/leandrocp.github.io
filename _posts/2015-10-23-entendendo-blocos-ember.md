@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Entendendo blocos do Ember - Handlebars
+description: Entendendo como funciona os blocos em componentes no Handlebars
 ---
 
 Componentes e helpers utilizados nas views do Ember podem receber blocos, como é o caso do `if`:
