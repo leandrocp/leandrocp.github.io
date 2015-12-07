@@ -1,28 +1,14 @@
-# Dependencies
-markdown:         redcarpet
-pygments:         true
+title: Leandro Cesquini Pereira
+description: A blog about Emberjs, Elixir, Ruby and some random things about software development. Written by Leandro Cesquini Pereira.
+author: Leandro Cesquini Pereira
+email: leandro.cesquini@gmail.com
+url: http://leandrocp.github.io/
+baseurl: "/"
+twitter_username: leandrocesquini
+github_username: leandrocp
 
-# Markdown
-redcarpet:
-  extensions:     ["no_intra_emphasis", "fenced_code_blocks", "autolink", "strikethrough", "superscript", "with_toc_data"]
-
-# Permalinks
-permalink:        pretty
-
-# Setup
-title:            Keep Coding
-tagline:          'leandrocp'
-description:      'Ruby, Rails, Emberjs. By <a href="https://twitter.com/leandrocesquini" target="_blank">@leandrocesquini</a>.'
-url:              http://leandrocp.github.io/
-baseurl:          '/'
-paginate:         5
-
-author:
-  name:           'Leandro Cesquini Pereira'
-  url:            https://twitter.com/leandrocesquini
-
-# Custom vars
-version:          1.0.0
-
-github:
-  repo:           https://github.com/leandrocp/leandrocp.github.io
+include: [_pages]
+markdown: kramdown
+permalink: pretty
+sass:
+  style: compressed
