@@ -9,6 +9,6 @@ github_username: leandrocp
 
 include: [_pages]
 markdown: kramdown
-permalink: /:year/:month/:title
+permalink: /:year/:month/:title/
 sass:
   style: compressed
