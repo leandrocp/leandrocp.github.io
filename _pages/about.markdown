@@ -3,4 +3,12 @@ layout: content
 title: About
 permalink: /about/
 ---
-This is your about page where you write about yourself in third person and share some links for people to follow you. Take advantage of it.
+
+## Interests
+- Elixir
+- Ruby
+- Emberjs
+- Javascript
+
+## Contact
+You can find me at either <leandro.cesquini@gmail.com> or [Twitter](https://twitter.com/leandrocesquini).
