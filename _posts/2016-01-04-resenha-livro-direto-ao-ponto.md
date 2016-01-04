@@ -8,7 +8,7 @@ Resenha do livro [Direto ao Ponto - Criando produtos de forma enxuta](http://www
 
 Se você ou sua empresa irá iniciar um projeto ou mesmo está no meio de um projeto mas está meio perdido com todas atividades necessárias pra tirar a ideia da cabeça e disponibilizar um produto ao seu usuário final, então este livro é mais que recomendado, é praticamente obrigatório.
 
-Como o próprio autor justifica, o livro traz uma receita de bolo que o ajudará a identificar a visão e objetivos do produto, as personas, as features, jornadas e com estas valiosas informações, planejar as entregas enxutas, curtas e priorizadas. Em outras palavras irá te ajudar a construir um produto em etapas, o chamado MVP.
+Como o próprio autor justifica, o livro traz uma receita de bolo que o ajudará a identificar a visão e objetivos do produto, personas, features e jornadas. Com estas valiosas informações, planejar as entregas enxutas, curtas e priorizadas. Em outras palavras irá te ajudar a construir um produto em etapas, o chamado MVP.
 
 ### Mas meu produto é muito grande ou minha empresa não é uma startup !
 
@@ -26,7 +26,7 @@ Conceitos e técnicas ágeis são muito úteis para se usar no decorrer do proje
 
 E são justamente estas dificuldades que o autor demonstra como resolver de forma simples no formato de um workshop colaborativo com atividades passo-a-passo, que compreende desde a ideia do produto até o planejamento das entregas priorizadas pelo valor de negócio. É o caminho para o desenvolvimento do seu produto.
 
-Você pode conferir a lista de atividades desempenhadas no workshop no [sumário do livro](https://s3.amazonaws.com/casadocodigo/direto-ao-ponto/direto-ao-ponto-sumario.pdf)
+Você pode conferir a lista de atividades desempenhadas no workshop no [sumário do livro](https://s3.amazonaws.com/casadocodigo/direto-ao-ponto/direto-ao-ponto-sumario.pdf).
 
 ### Conclusão
 
