@@ -30,6 +30,6 @@ Você pode conferir a lista de atividades desempenhadas no workshop no [sumário
 
 ### Conclusão
 
-O livro é de leitura fácil e com muitas fotos e desenhos para exemplificar as atividades realizadas no workshop. Inclusive o prefácio inclui um exemplo real da aplicação dos conceitos ensinados no livro.
+O livro é de leitura fácil e com muitas fotos e desenhos para exemplificar as atividades realizadas no workshop. Inclusive o apêndice inclui um exemplo real da aplicação dos conceitos ensinados no livro.
 
 É indicado para qualquer pessoa que queira organizar ou mesmo otimizar o seu processo de desenvolvimento de produtos pois o livro consegue ensinar áreas do planejamento que envolvem análise, riscos, estimativas e outras que você iria se desinteressar se fosse um livro clássico de gerenciamento de projetos.
