@@ -4,7 +4,7 @@ title: Elixir - Usando Pattern Matching para melhorar seu código
 tags: [elixir, functional-programming]
 ---
 
-Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos [vários](http://elixir-lang.org/getting-started/pattern-matching.html) [materiais](https://elixirschool.com/pt/lessons/basics/pattern-matching/) e [artigos](http://philipsampaio.com.br/blog/2015/01/08/10-exemplos-de-pattern-matching-em-elixir) que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching, recomendo ler os links antes de continuar.
+Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos [vários](http://elixir-lang.org/getting-started/pattern-matching.html) [materiais](https://elixirschool.com/pt/lessons/basics/pattern-matching/) e [artigos](http://philipsampaio.com.br/blog/2015/01/08/10-exemplos-de-pattern-matching-em-elixir) que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar.
 
 Neste artigo vou mostrar uma forma de usar Pattern Matching que me fez perceber como este recurso é poderoso e elegante. Vamos começar com um exemplo de código simples.
 
@@ -30,7 +30,7 @@ def desconto(produto:, cliente:)
 end
 {% endhighlight %}
 
-À primeira vista é um código inofensivo, mas este projeto irá crescer e o excesso de condicionais pode se tornar um problema na manutenção e evolução da base de código. Imagine que o sistema precise calcular desconto no primeiro pedido do cliente, ou que além de email deve enviar SMS, ou ainda aplicar desconto progressivo no desconto... acho que ficou claro onde mora o perigo.
+À primeira vista é um código inofensivo, mas este projeto irá crescer e o excesso de condicionais pode se tornar um problema na manutenção e evolução da base de código. Imagine que no futuro o sistema precise calcular desconto no primeiro pedido do cliente, ou que além de email deve enviar SMS, ou ainda aplicar desconto progressivo no desconto... acho que ficou claro onde mora o perigo.
 
 Você já sabe que Pattern Matching, como o próprio nome diz, serve para casar padrões. Então como podemos reescrever nosso método `desconto` para que fique mais legível e compreensível ? Pattern Matching!
 
