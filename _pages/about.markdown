@@ -4,6 +4,9 @@ title: About
 permalink: /about/
 ---
 
+## Short Bio
+With over 10 years of software development, I'm always searching new experience and knowledge. Special interest on new challenges and how to apply new technologies to solve them and provide good experience for users.
+
 ## Interests
 - Elixir
 - Ruby
@@ -11,4 +14,4 @@ permalink: /about/
 - Javascript
 
 ## Contact
-You can find me at either <leandro.cesquini@gmail.com> or [Twitter](https://twitter.com/leandrocesquini).
+You can find me at either <leandro@leandrocp.com> or [Twitter](https://twitter.com/leandrocesquini).
