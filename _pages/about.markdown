@@ -14,4 +14,4 @@ With over 10 years of software development, I'm always searching new experience 
 - Javascript
 
 ## Contact
-You can find me at either <leandro@leandrocp.com> or [Twitter](https://twitter.com/leandrocesquini). Professional details please see my [Linkedin](https://www.linkedin.com/in/leandrocesquini).
+You can find me at either <leandro@leandrocp.com.br> or [Twitter](https://twitter.com/leandrocesquini). Professional details please see my [Linkedin](https://www.linkedin.com/in/leandrocesquini).
