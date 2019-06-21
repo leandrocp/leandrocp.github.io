@@ -1,0 +1,25 @@
+title:              Leandro Cesquini Pereira
+email:              leandro@leandrocp.com.br
+description:        Leandro Cesquini Pereira. Software Engineer and Open Source contributor.
+author:             Leandro Cesquini Pereira
+baseurl:            "/"
+url:                "https://leandrocp.com.br"
+
+theme: jekyll-theme-clean-blog
+
+# Social Profiles
+twitter_username:   leandrocesquini
+github_username:    leandrocp
+linkedin_username:  leandrocesquini
+
+google_analytics: UA-60912157-1
+
+markdown:      kramdown
+highlighter:   rouge
+paginate:      5
+paginate_path: "/posts/page:num/"
+permalink:     /:year/:month/:title/
+plugins:
+  - jekyll-feed
+  - jekyll-paginate
+  - jekyll-sitemap
