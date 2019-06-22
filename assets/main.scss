@@ -2,13 +2,11 @@
 # Only the main Sass file needs front matter (the dashes are enough)
 ---
 
-//$primary: #4b285b;
-//$primary: #551a8b;
 $purple2: #4b285b;
 $orange: #ffc300;
 $primary: $purple2;
 
-@import "styles";
+@import "../assets/vendor/startbootstrap-clean-blog/scss/clean-blog.scss";
 @import "github.css";
 
 body {
