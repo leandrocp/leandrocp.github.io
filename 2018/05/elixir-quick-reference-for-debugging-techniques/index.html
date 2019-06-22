@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    Elixir — quick reference for debugging techniques - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="Elixir — quick reference for debugging techniques" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Much has been said about Elixir debugging techniques, but in this post, I’d like to give a quick overview of all possible options to serve as a go-to reference when you need to debug Elixir code. Enough talking, let’s check each of them:" />
+<meta property="og:description" content="Much has been said about Elixir debugging techniques, but in this post, I’d like to give a quick overview of all possible options to serve as a go-to reference when you need to debug Elixir code. Enough talking, let’s check each of them:" />
+<link rel="canonical" href="https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques/" />
+<meta property="og:url" content="https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-05-17T00:00:00-03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Elixir — quick reference for debugging techniques" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"headline":"Elixir — quick reference for debugging techniques","dateModified":"2018-05-17T00:00:00-03:00","datePublished":"2018-05-17T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques/"},"description":"Much has been said about Elixir debugging techniques, but in this post, I’d like to give a quick overview of all possible options to serve as a go-to reference when you need to debug Elixir code. Enough talking, let’s check each of them:","@type":"BlogPosting","url":"https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/posts/elixir-bug.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>Elixir — quick reference for debugging techniques</h1>
+            
+            <span class="meta">
+              May 17, 2018 &middot; <span class="reading-time" title="Estimated read time">
+  
+   11 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <p><a href="https://elixir-lang.org/getting-started/debugging.html" rel="nofollow" target="_blank">Much</a> <a href="http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang/" rel="nofollow" target="_blank">has</a> <a href="https://speakerdeck.com/gcauchon/debugging-elixir-efficently" rel="nofollow" target="_blank">been</a> said about Elixir debugging techniques, but in this post, I’d like to give a quick overview of all possible options to serve as a go-to reference when you need to debug Elixir code. Enough talking, let’s check each of them:</p>
+
+<h2 id="ioinspect">IO.inspect</h2>
+
+<p>The simplest technique:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">my_list</span> <span class="o">=</span> <span class="p">[</span><span class="m">1</span><span class="p">,</span> <span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">]</span>
+<span class="no">IO</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">my_list</span><span class="p">)</span>
+
+<span class="c1"># Outputs</span>
+<span class="p">[</span><span class="m">1</span><span class="p">,</span> <span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p><a href="https://hexdocs.pm/elixir/IO.html#inspect/2" rel="nofollow" target="_blank">IO.inspect/2</a>can also be used inside pipelines because <a href="https://github.com/elixir-lang/elixir/blob/v1.6.5/lib/elixir/lib/io.ex#L311" rel="nofollow" target="_blank">it returns the item passed to be inspected</a>. And the tip here is to use the option label:to output a string identifying each inspect:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="m">1</span><span class="p">,</span> <span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">]</span>
+<span class="o">|&gt;</span> <span class="no">IO</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="ss">label:</span> <span class="sd">"</span><span class="s2">before"</span><span class="p">)</span>
+<span class="o">|&gt;</span> <span class="no">Enum</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="o">&amp;</span><span class="p">(</span><span class="nv">&amp;1</span> <span class="o">*</span> <span class="m">2</span><span class="p">))</span>
+<span class="o">|&gt;</span> <span class="no">IO</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="ss">label:</span> <span class="sd">"</span><span class="s2">after"</span><span class="p">)</span>
+<span class="o">|&gt;</span> <span class="no">Enum</span><span class="o">.</span><span class="n">sum</span>
+
+<span class="c1"># Outputs</span>
+<span class="ss">before:</span> <span class="p">[</span><span class="m">1</span><span class="p">,</span> <span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">]</span>
+<span class="k">after</span><span class="p">:</span> <span class="p">[</span><span class="m">2</span><span class="p">,</span> <span class="m">4</span><span class="p">,</span> <span class="m">6</span><span class="p">]</span>
+</code></pre></div></div>
+
+<h2 id="ioinspect-with-binding">IO.inspect with binding</h2>
+
+<p><a href="https://hexdocs.pm/elixir/Kernel.html#binding/1" rel="nofollow" target="_blank">binding/1</a> is very useful when you want to see all variable names and values of the current function:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">some_fun</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">do</span>
+  <span class="no">IO</span><span class="o">.</span><span class="n">inspect</span> <span class="n">binding</span><span class="p">()</span>
+  <span class="o">...</span>
+<span class="k">end</span>
+
+<span class="n">iex</span><span class="o">&gt;</span> <span class="n">some_fun</span><span class="p">(</span><span class="ss">:foo</span><span class="p">,</span> <span class="sd">"</span><span class="s2">bar"</span><span class="p">,</span> <span class="ss">:baz</span><span class="p">)</span>
+<span class="p">[</span><span class="ss">a:</span> <span class="ss">:foo</span><span class="p">,</span> <span class="ss">b:</span> <span class="sd">"</span><span class="s2">bar"</span><span class="p">,</span> <span class="ss">c:</span> <span class="ss">:baz</span><span class="p">]</span>
+</code></pre></div></div>
+
+<h2 id="apex">apex</h2>
+
+<p>Similar to IO.inspect/2, <a href="https://github.com/BjRo/apex" rel="nofollow" target="_blank">apex</a> is a lib worth mentioning especially because of its <a href="https://github.com/BjRo/apex#awesome-def-aka-adef" rel="nofollow" target="_blank">adef</a> macro:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># import apex adef macro</span>
+<span class="kn">import</span> <span class="no">Apex</span><span class="o">.</span><span class="no">AwesomeDef</span>
+
+<span class="c1"># change def to adef</span>
+<span class="n">adef</span> <span class="n">test</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">options</span> <span class="p">\\</span> <span class="p">[])</span> <span class="k">do</span>
+  <span class="n">data</span>
+<span class="k">end</span>
+
+<span class="c1"># when you call your function, you'll receive detailed information about its execution</span>
+<span class="n">iex</span><span class="p">(</span><span class="m">1</span><span class="p">)</span><span class="o">&gt;</span> <span class="no">Apex</span><span class="o">.</span><span class="n">test</span> <span class="sd">"</span><span class="s2">foo"</span>
+<span class="o">&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</span>
+<span class="no">Function</span> <span class="no">Elixir</span><span class="o">.</span><span class="no">Apex</span><span class="o">.</span><span class="n">test</span> <span class="n">was</span> <span class="n">called</span>
+<span class="n">defined</span> <span class="ow">in</span> <span class="o">/</span><span class="no">Users</span><span class="o">/</span><span class="n">bjoernrochel</span><span class="o">/</span><span class="no">Coding</span><span class="o">/</span><span class="no">Laboratory</span><span class="o">/</span><span class="n">apex</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">apex</span><span class="o">.</span><span class="ss">ex:</span><span class="m">12</span>
+<span class="o">----------------------------------------------------------------------------------------------------</span>
+<span class="ss">Parameters:</span>
+<span class="o">----------------------------------------------------------------------------------------------------</span>
+<span class="p">[</span>
+  <span class="p">[</span><span class="m">0</span><span class="p">]</span> <span class="sd">"</span><span class="s2">foo"</span>
+  <span class="p">[</span><span class="m">1</span><span class="p">]</span> <span class="p">[]</span>
+<span class="p">]</span>
+
+<span class="o">----------------------------------------------------------------------------------------------------</span>
+<span class="ss">Result:</span>
+<span class="o">----------------------------------------------------------------------------------------------------</span>
+<span class="sd">"</span><span class="s2">foo"</span>
+</code></pre></div></div>
+
+<h2 id="iexpry">IEx.pry</h2>
+
+<p>But it can be very tedious and be limiting to debug with just data inspection likeIO.inspect or apex, that’s when <a href="https://hexdocs.pm/iex/IEx.html#pry/0" rel="nofollow" target="_blank">IEx.pry/0</a> comes at hand because it allows you to pry into the current code. Put the following code at the line you want to pry:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">some_fun</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">do</span>
+  <span class="kn">require</span> <span class="no">IEx</span><span class="p">;</span> <span class="no">IEx</span><span class="o">.</span><span class="n">pry</span>
+  <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>And now execute your code inside an IEx session: iex -S mix or iex -S mix phx.server if you are using Phoenix Framework. Tip: if you are running tasks like database seeds, you can pry into that code by running iex -S mix run priv/repo/seeds.exs or any other script.</p>
+
+<p>Once the code execution gets to the point of IEx.pry , an interactive shell opens and allow you to interact with the current code.</p>
+
+<p>Go to <a href="https://medium.com/@diamondgfx/debugging-phoenix-with-iex-pry-5417256e1d11" rel="nofollow" target="_blank">Debugging Phoenix with IEx.pry</a> if you want more tips about debugging Phoenix with IEx.pry.</p>
+
+<h2 id="debugger">:debugger</h2>
+
+<p>Pretty much the same as IEx.pry which stops the execution at the break point and allows you to inspect the current code, but <a href="http://erlang.org/doc/apps/debugger/debugger_chapter.html" rel="nofollow" target="_blank">:debugger</a> gives you a nice visual interface, like the ones in IDEs:</p>
+
+<p><img src="http://blog.plataformatec.com.br/wp-content/uploads/2016/04/debugger-elixir.gif" alt="gif from http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang/)"></p>
+
+<p>gif from <a href="http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang" rel="nofollow" target="_blank">http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang</a></p>
+
+<p>To open this debugger, you need to start it and set a break point:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># given that you have this module</span>
+<span class="k">defmodule</span> <span class="no">MyApp</span><span class="o">.</span><span class="no">Example</span> <span class="k">do</span>
+  <span class="k">def</span> <span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># start a new iex session</span>
+<span class="err">$</span> <span class="n">iex</span> <span class="o">-</span><span class="no">S</span> <span class="n">mix</span>
+
+<span class="c1"># then start :debugger</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="ss">:debugger</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<span class="c1"># prepare your module for debugging</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="ss">:int</span><span class="o">.</span><span class="n">ni</span><span class="p">(</span><span class="no">MyApp</span><span class="o">.</span><span class="no">Example</span><span class="p">)</span>
+
+<span class="c1"># set a break point at the line you want to capture</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="ss">:int</span><span class="o">.</span><span class="n">break</span><span class="p">(</span><span class="no">MyApp</span><span class="o">.</span><span class="no">Example</span><span class="p">,</span> <span class="m">3</span><span class="p">)</span>
+
+<span class="c1"># and finally call your function</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="no">MyApp</span><span class="o">.</span><span class="no">Example</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="m">1</span><span class="p">,</span><span class="m">2</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="sysget_state-and-sysget_status">:sys.get_state and :sys.get_status</h2>
+
+<p>This one works only for processes. As the name suggests, <a href="http://erlang.org/doc/man/sys.html#get_state-1" rel="nofollow" target="_blank">:sys.get_state/1</a>gets the current state of a process, and not only from a GenServer but also from any kind of process:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iex</span><span class="p">(</span><span class="m">1</span><span class="p">)</span><span class="o">&gt;</span> <span class="k">defmodule</span> <span class="no">Example</span><span class="p">,</span> <span class="k">do</span><span class="p">:</span> <span class="kn">use</span> <span class="no">GenServer</span>
+<span class="n">iex</span><span class="p">(</span><span class="m">2</span><span class="p">)</span><span class="o">&gt;</span> <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">pid</span><span class="p">}</span> <span class="o">=</span> <span class="no">GenServer</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="no">Example</span><span class="p">,</span> <span class="p">%{</span><span class="ss">ping:</span> <span class="sd">"</span><span class="s2">pong"</span><span class="p">})</span>
+<span class="n">iex</span><span class="p">(</span><span class="m">3</span><span class="p">)</span><span class="o">&gt;</span> <span class="ss">:sys</span><span class="o">.</span><span class="n">get_state</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span>
+<span class="p">%{</span><span class="ss">ping:</span> <span class="sd">"</span><span class="s2">pong"</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>Snippet extracted from <a href="https://til.hashrocket.com/posts/urmxev1dh5-looking-at-the-state-of-processes-in-elixir" rel="nofollow" target="_blank">Looking at the state of processes in Elixir</a>.</p>
+
+<p>If you need more data than just the current state, just call <a href="http://erlang.org/doc/man/sys.html#get_status-1" rel="nofollow" target="_blank">:sys.get_status/1</a> , which will return whole process information:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="c1"># Excerpt From: Dave Thomas. “Programming Elixir ≥ 1.6"</span>
+</code></pre></div></div>
+
+<p>Snnipet extracted from <a href="https://pragprog.com/book/elixir/programming-elixir" rel="nofollow" target="_blank">Programming Elixir book</a>.</p>
+
+<p>Bonus: you can replace a process state at runtime using <a href="http://erlang.org/doc/man/sys.html#replace_state-2" rel="nofollow" target="_blank">:sys.replace_state/2</a> , which can be very handy to test some specific situation.</p>
+
+<h2 id="processinfo">Process.info</h2>
+
+<p>You can also use <a href="https://hexdocs.pm/elixir/Process.html#info/1" rel="nofollow" target="_blank">Process.info/1</a> to get information about a specific process:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iex</span><span class="o">&gt;</span> <span class="k">defmodule</span> <span class="no">Example</span><span class="p">,</span> <span class="k">do</span><span class="p">:</span> <span class="kn">use</span> <span class="no">GenServer</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">pid</span><span class="p">}</span> <span class="o">=</span> <span class="no">GenServer</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="no">Example</span><span class="p">,</span> <span class="p">%{</span><span class="ss">ping:</span> <span class="sd">"</span><span class="s2">pong"</span><span class="p">})</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="no">Process</span><span class="o">.</span><span class="n">info</span> <span class="n">pid</span>
+<span class="p">[</span>
+  <span class="ss">current_function:</span> <span class="p">{</span><span class="ss">:gen_server</span><span class="p">,</span> <span class="ss">:loop</span><span class="p">,</span> <span class="m">7</span><span class="p">},</span>
+  <span class="ss">initial_call:</span> <span class="p">{</span><span class="ss">:proc_lib</span><span class="p">,</span> <span class="ss">:init_p</span><span class="p">,</span> <span class="m">5</span><span class="p">},</span>
+  <span class="ss">status:</span> <span class="ss">:waiting</span><span class="p">,</span>
+  <span class="ss">message_queue_len:</span> <span class="m">0</span><span class="p">,</span>
+  <span class="ss">messages:</span> <span class="p">[],</span>
+  <span class="ss">links:</span> <span class="p">[</span><span class="c1">#PID&lt;0.610.0&gt;],</span>
+  <span class="ss">dictionary:</span> <span class="p">[</span>
+    <span class="sd">"</span><span class="s2">$initial_call"</span><span class="p">:</span> <span class="p">{</span><span class="no">Example</span><span class="p">,</span> <span class="ss">:init</span><span class="p">,</span> <span class="m">1</span><span class="p">},</span>
+    <span class="sd">"</span><span class="s2">$ancestors"</span><span class="p">:</span> <span class="p">[</span><span class="c1">#PID&lt;0.610.0&gt;, #PID&lt;0.70.0&gt;]</span>
+  <span class="p">],</span>
+  <span class="ss">trap_exit:</span> <span class="no">false</span><span class="p">,</span>
+  <span class="ss">error_handler:</span> <span class="ss">:error_handler</span><span class="p">,</span>
+  <span class="ss">priority:</span> <span class="ss">:normal</span><span class="p">,</span>
+  <span class="ss">group_leader:</span> <span class="c1">#PID&lt;0.60.0&gt;,</span>
+  <span class="ss">total_heap_size:</span> <span class="m">233</span><span class="p">,</span>
+  <span class="ss">heap_size:</span> <span class="m">233</span><span class="p">,</span>
+  <span class="ss">stack_size:</span> <span class="m">10</span><span class="p">,</span>
+  <span class="ss">reductions:</span> <span class="m">27</span><span class="p">,</span>
+  <span class="ss">garbage_collection:</span> <span class="p">[</span>
+    <span class="ss">max_heap_size:</span> <span class="p">%{</span><span class="ss">error_logger:</span> <span class="no">true</span><span class="p">,</span> <span class="ss">kill:</span> <span class="no">true</span><span class="p">,</span> <span class="ss">size:</span> <span class="m">0</span><span class="p">},</span>
+    <span class="ss">min_bin_vheap_size:</span> <span class="m">46422</span><span class="p">,</span>
+    <span class="ss">min_heap_size:</span> <span class="m">233</span><span class="p">,</span>
+    <span class="ss">fullsweep_after:</span> <span class="m">65535</span><span class="p">,</span>
+    <span class="ss">minor_gcs:</span> <span class="m">0</span>
+  <span class="p">],</span>
+  <span class="ss">suspending:</span> <span class="p">[]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<h2 id="systrace">:sys.trace</h2>
+
+<p>Still talking about process debug, another resource we have is <a href="http://erlang.org/doc/man/sys.html#trace-2" rel="nofollow" target="_blank">:sys.trace/2</a>to trace process calls, which will display each call and state change of the calling process:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iex</span><span class="o">&gt;</span> <span class="ss">:sys</span><span class="o">.</span><span class="n">trace</span> <span class="n">pid</span><span class="p">,</span> <span class="no">true</span>
+<span class="ss">:ok</span>
+<span class="n">iex</span><span class="o">&gt;</span> <span class="no">GenServer</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="err">​</span><span class="ss">:next_number</span><span class="err">​</span><span class="p">)</span>
+<span class="o">*</span><span class="no">DBG</span><span class="o">*</span> <span class="o">&lt;</span><span class="m">0.69</span><span class="o">.</span><span class="m">0</span><span class="o">&gt;</span> <span class="n">got</span> <span class="n">call</span> <span class="n">next_number</span> <span class="n">from</span> <span class="o">&lt;</span><span class="m">0.25</span><span class="o">.</span><span class="m">0</span><span class="o">&gt;</span>
+<span class="o">*</span><span class="no">DBG</span><span class="o">*</span> <span class="o">&lt;</span><span class="m">0.69</span><span class="o">.</span><span class="m">0</span><span class="o">&gt;</span> <span class="n">sent</span> <span class="m">105</span> <span class="n">to</span> <span class="o">&lt;</span><span class="m">0.25</span><span class="o">.</span><span class="m">0</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">new</span> <span class="n">state</span> <span class="m">106</span>
+<span class="m">105</span>
+
+<span class="c1"># Excerpt From: Dave Thomas. “Programming Elixir ≥ 1.6” iBooks. </span>
+</code></pre></div></div>
+
+<h2 id="distillery-commands">Distillery commands</h2>
+
+<p>After you deploy your application as a package release, it may be very helpful to get information about it, specially if something is not working as expected. If you have deployed using <a href="https://github.com/bitwalker/distillery" rel="nofollow" target="_blank">Distillery</a>, you’ll soon discover that mix does not work the same way as in your local machine, and that’s expected. But you can execute some commands on that release by calling <code class="highlighter-rouge">bin/&lt;app_name&gt; &lt;command&gt;</code>, the two more useful commands are: <code class="highlighter-rouge">remote_console</code> to start an IEx session on the running release and help to give you a list of all <a href="https://github.com/bitwalker/distillery/tree/1.5.2/priv/libexec/commands" rel="nofollow" target="_blank">commands</a>.</p>
+
+<h2 id="observer">:observer</h2>
+
+<p>Although it’s not exactly a debug tool, it’s worth mentioning that <a href="http://erlang.org/doc/man/observer.html" rel="nofollow" target="_blank">:observer</a> helps you get an overview of the running system. I’ll not dig into details because there are a lot of articles that already do that, so I’ll just leave here the function call to start the observer:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iex</span><span class="o">&gt;</span> <span class="ss">:observer</span><span class="o">.</span><span class="n">start</span>
+</code></pre></div></div>
+
+<h3 id="notes-and-sources">Notes and sources</h3>
+
+<p>If you have more tips and techniques, please leave a comment so I can update this post and help spread more Elixir knowledge. :)</p>
+
+<p>Some code snippets were extracted from the great official documentation or from the <a href="https://elixir-lang.org/getting-started/introduction.html" rel="nofollow" target="_blank">official getting started tutorial</a>.</p>
+
+<p>The book <a href="https://pragprog.com/book/elixir/programming-elixir" rel="nofollow" target="_blank">Programming Elixir</a> was also used as source.</p>
+
+<p>The <a href="https://til.hashrocket.com/" rel="nofollow" target="_blank">Today I Learned</a> from Hashrocket is also a great source of tips.</p>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2016/04/usando-pattern-matching-para-melhorar-codigo/" data-toggle="tooltip" data-placement="top" title="Elixir - Usando Pattern Matching para melhorar seu código">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+          <a class="btn btn-primary float-right" href="/2018/10/implementing-bounded-contexts-in-elixir/" data-toggle="tooltip" data-placement="top" title="Implementing Bounded Contexts in Elixir">Next<span class="d-none d-md-inline">
+              Post</span> &rarr;</a>
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>

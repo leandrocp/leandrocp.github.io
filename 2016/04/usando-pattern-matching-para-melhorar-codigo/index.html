@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    Elixir - Usando Pattern Matching para melhorar seu código - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="Elixir - Usando Pattern Matching para melhorar seu código" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos vários materiais e artigos que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar." />
+<meta property="og:description" content="Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos vários materiais e artigos que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar." />
+<link rel="canonical" href="https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo/" />
+<meta property="og:url" content="https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2016-04-16T00:00:00-03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Elixir - Usando Pattern Matching para melhorar seu código" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"headline":"Elixir - Usando Pattern Matching para melhorar seu código","dateModified":"2016-04-16T00:00:00-03:00","datePublished":"2016-04-16T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo/"},"description":"Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos vários materiais e artigos que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar.","@type":"BlogPosting","url":"https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/pattern.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>Elixir - Usando Pattern Matching para melhorar seu código</h1>
+            
+            <span class="meta">
+              April 16, 2016 &middot; <span class="reading-time" title="Estimated read time">
+  
+   4 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <p>Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos <a href="http://elixir-lang.org/getting-started/pattern-matching.html" rel="nofollow" target="_blank">vários</a> <a href="https://elixirschool.com/pt/lessons/basics/pattern-matching/" rel="nofollow" target="_blank">materiais</a> e <a href="http://philipsampaio.com.br/blog/2015/01/08/10-exemplos-de-pattern-matching-em-elixir" rel="nofollow" target="_blank">artigos</a> que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar.</p>
+
+<p>Neste artigo vou mostrar uma forma de usar Pattern Matching que me fez perceber como este recurso é poderoso e elegante. Vamos começar com um exemplo de código simples.</p>
+
+<p>Quem nunca escreveu um código assim ?</p>
+
+<figure class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="n">cliente</span> <span class="o">=</span> <span class="no">Cliente</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="ss">id: </span><span class="mi">1000</span><span class="p">,</span> <span class="ss">cartao_fidelidade: </span><span class="kp">true</span><span class="p">,</span> <span class="ss">email: </span><span class="s1">'cliente@pizzaria.com'</span><span class="p">)</span>
+<span class="n">desconto_pedido</span> <span class="o">=</span> <span class="n">desconto</span><span class="p">(</span><span class="ss">produto: </span><span class="n">pizza</span><span class="p">,</span> <span class="ss">cliente: </span><span class="n">cliente</span><span class="p">)</span>
+
+<span class="c1"># Aplica 5% de desconto no valor do produto caso o cliente possua o cartão fidelidade.</span>
+<span class="c1"># Caso não possua, envia email de marketing para oferecer o cartão fidelidade.</span>
+<span class="c1"># Retorna o valor calculado do desconto</span>
+<span class="k">def</span> <span class="nf">desconto</span><span class="p">(</span><span class="n">produto</span><span class="p">:,</span> <span class="n">cliente</span><span class="p">:)</span>
+    <span class="k">if</span> <span class="n">cliente</span><span class="p">.</span><span class="nf">cartao_fidelidade</span>
+        <span class="n">desconto</span> <span class="o">=</span> <span class="n">calcular_valor_desconto</span><span class="p">(</span><span class="n">produto</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="k">else</span>
+        <span class="n">desconto</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">cliente</span><span class="p">.</span><span class="nf">email</span>
+            <span class="n">enviar_marketing_fidelidade</span><span class="p">(</span><span class="n">cliente</span><span class="p">.</span><span class="nf">email</span><span class="p">)</span>
+        <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="n">desconto</span>
+<span class="k">end</span></code></pre></figure>
+
+<p>À primeira vista é um código inofensivo, mas este projeto irá crescer e o excesso de condicionais pode se tornar um problema na manutenção e evolução da base de código. Imagine que no futuro o sistema precise calcular desconto no primeiro pedido do cliente, ou que além de email deve enviar SMS, ou ainda aplicar desconto progressivo no desconto… acho que ficou claro onde mora o perigo.</p>
+
+<p>Você já sabe que Pattern Matching, como o próprio nome diz, serve para casar padrões. Então como podemos reescrever nosso método <code class="highlighter-rouge">desconto</code> para que fique mais legível e compreensível ? Pattern Matching!</p>
+
+<figure class="highlight"><pre><code class="language-elixir" data-lang="elixir"><span class="n">cliente</span> <span class="o">=</span> <span class="p">%{</span><span class="ss">id:</span> <span class="m">1000</span><span class="p">,</span> <span class="ss">cartao_fidelidade:</span> <span class="no">true</span><span class="p">,</span> <span class="ss">email:</span> <span class="s1">'cliente@pizzaria.com'</span><span class="p">}</span>
+<span class="n">pedido</span> <span class="o">=</span> <span class="n">desconto</span><span class="p">(</span><span class="n">pizza</span><span class="p">,</span> <span class="n">cliente</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="n">desconto</span><span class="p">(</span><span class="n">produto</span><span class="p">,</span> <span class="p">%{</span><span class="ss">cartao_fidelidade:</span> <span class="no">false</span><span class="p">,</span> <span class="ss">email:</span> <span class="no">nil</span><span class="p">})</span> <span class="k">do</span>
+    <span class="m">0</span>
+<span class="k">end</span>
+
+<span class="k">def</span> <span class="n">desconto</span><span class="p">(</span><span class="n">produto</span><span class="p">,</span> <span class="p">%{</span><span class="ss">cartao_fidelidade:</span> <span class="no">false</span><span class="p">,</span> <span class="ss">email:</span> <span class="n">email_cliente</span><span class="p">})</span> <span class="k">do</span>
+    <span class="n">enviar_marketing_fidelidade</span><span class="p">(</span><span class="n">email_cliente</span><span class="p">)</span>
+    <span class="m">0</span>
+<span class="k">end</span>
+
+<span class="k">def</span> <span class="n">desconto</span><span class="p">(</span><span class="n">produto</span><span class="p">,</span> <span class="p">%{</span><span class="ss">cartao_fidelidade:</span> <span class="no">true</span><span class="p">})</span> <span class="k">do</span>
+    <span class="n">calcular_valor_desconto</span><span class="p">(</span><span class="n">produto</span><span class="p">,</span> <span class="m">5</span><span class="p">)</span>
+<span class="k">end</span></code></pre></figure>
+
+<p>O <a href="http://elixir-lang.org/getting-started/keywords-and-maps.html#maps" rel="nofollow" target="_blank">map</a> <code class="highlighter-rouge">cliente</code> possui as chaves <code class="highlighter-rouge">cartao_fidelidade</code> e <code class="highlighter-rouge">email</code>, que serão usadas para casar com os parâmetros de cada função:</p>
+
+<figure class="highlight"><pre><code class="language-elixir" data-lang="elixir"><span class="c1"># Qual das funções casa/combina com este cliente ?</span>
+<span class="n">cliente</span> <span class="o">=</span> <span class="p">%{</span><span class="ss">cartao_fidelidade:</span> <span class="no">false</span><span class="p">,</span> <span class="ss">email:</span> <span class="no">nil</span><span class="p">}</span></code></pre></figure>
+
+<p>A grande diferença entre as duas versões é que usando Pattern Matching seu código se torna explícito adotando lógicas isoladas para cada condição, este é um efeito colateral típico de linguagens funcionais.</p>
+
+<p>No primeiro caso a complexidade é maior pois temos que lidar com o estado dos atributos do objeto <code class="highlighter-rouge">cliente</code>, porém o que importa para o processamento da lógica são os dados, e eles devem ser explícitos.</p>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2016/01/resenha-livro-direto-ao-ponto/" data-toggle="tooltip" data-placement="top" title="Resenha do livro Direto ao Ponto">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+          <a class="btn btn-primary float-right" href="/2018/05/elixir-quick-reference-for-debugging-techniques/" data-toggle="tooltip" data-placement="top" title="Elixir — quick reference for debugging techniques">Next<span class="d-none d-md-inline">
+              Post</span> &rarr;</a>
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>

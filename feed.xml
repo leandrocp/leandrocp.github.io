@@ -1,0 +1,1182 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.5">Jekyll</generator><link href="https://leandrocp.com.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://leandrocp.com.br/" rel="alternate" type="text/html" /><updated>2019-06-22T18:14:07-03:00</updated><id>https://leandrocp.com.br/feed.xml</id><title type="html">Leandro Cesquini Pereira</title><subtitle>Software Engineer and Open Source contributor</subtitle><author><name>Leandro Cesquini Pereira</name></author><entry><title type="html">Enforcing code quality in Elixir</title><link href="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/" rel="alternate" type="text/html" title="Enforcing code quality in Elixir" /><published>2019-06-07T00:00:00-03:00</published><updated>2019-06-07T00:00:00-03:00</updated><id>https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir</id><content type="html" xml:base="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/">&lt;p&gt;Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a &lt;em&gt;mix alias&lt;/em&gt; that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading.&lt;/p&gt;
+
+&lt;h2 id=&quot;tldr&quot;&gt;TL;DR&lt;/h2&gt;
+
+&lt;p&gt;The complete example is at the end of the article.&lt;/p&gt;
+
+&lt;h2 id=&quot;tools&quot;&gt;Tools&lt;/h2&gt;
+
+&lt;h3 id=&quot;credo-and-dialyzer&quot;&gt;Credo and Dialyzer&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/rrrene/credo&quot;&gt;Credo&lt;/a&gt; is responsible for checking if the code is adherent to common good code practices established by the community. And &lt;a href=&quot;http://erlang.org/doc/man/dialyzer.html&quot;&gt;dialyzer&lt;/a&gt; is a static analysis tool that identifies software discrepancies, such as definite type errors, code that has become dead or unreachable because of a programming error (paraphrasing the official docs), but we’ll use &lt;a href=&quot;https://github.com/jeremyjh/dialyxir&quot;&gt;dialyxir&lt;/a&gt;, which is wrapper around dialyzer written in Elixir that simplify the use of dialyzer.&lt;/p&gt;
+
+&lt;h3 id=&quot;sobelow&quot;&gt;Sobelow&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/nccgroup/sobelow&quot;&gt;Sobelow&lt;/a&gt; is a security-focused static analysis tool for the Phoenix framework. If you’re not using Phoenix, just remove it from the deps, configs, and alias described on this article.&lt;/p&gt;
+
+&lt;h3 id=&quot;mix-format&quot;&gt;mix format&lt;/h3&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://hexdocs.pm/mix/Mix.Tasks.Format.html&quot;&gt;mix format&lt;/a&gt; task was &lt;a href=&quot;https://elixir-lang.org/blog/2018/01/17/elixir-v1-6-0-released/&quot;&gt;introduced in Elixir v1.6&lt;/a&gt;, and it’s used to format your code automatically. One of the main benefits of using it is to avoid boring and endless discussions like “how we should format the code ?”, “what should be the line length ?”, and so on. &lt;a href=&quot;https://github.com/elixir-lang/elixir/blob/v1.8/Makefile#L215-L216&quot;&gt;Elixir also uses it&lt;/a&gt; to enforce a standard format.&lt;/p&gt;
+
+&lt;h3 id=&quot;warning-as-errors&quot;&gt;Warning as errors&lt;/h3&gt;
+
+&lt;p&gt;That’s not a tool, actually, it’s an &lt;a href=&quot;https://hexdocs.pm/mix/Mix.Tasks.Compile.Elixir.html&quot;&gt;Elixir compile attribute&lt;/a&gt; that will treat warnings in the current project as errors and return a non-zero exit code, which means that your project won’t compile if it has any warning.&lt;/p&gt;
+
+&lt;h3 id=&quot;a-note-before-we-continue&quot;&gt;A note before we continue&lt;/h3&gt;
+
+&lt;p&gt;Having all those tools and configs turned on &lt;em&gt;may be&lt;/em&gt; annoying. A module without doc, a wrong spec or even an unused variable will stop you from compiling and shipping the code. The level of enforcement is up to you, so you should adapt the tools and configs as required for your project (and your stress level). But it’s a good ideia to plan for the long term.&lt;/p&gt;
+
+&lt;h2 id=&quot;implementation&quot;&gt;Implementation&lt;/h2&gt;
+
+&lt;p&gt;Ok, let’s change the files to implement the quality check. Let’s do that piece by piece, or better saying, function by function.&lt;/p&gt;
+
+&lt;h3 id=&quot;mixexs&quot;&gt;mix.exs&lt;/h3&gt;
+
+&lt;p&gt;First, let’s install the deps. Add the following in &lt;em&gt;deps list&lt;/em&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:credo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dialyxir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.0.0-rc.6&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:sobelow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 0.7&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;And let’s change the project’s config. Add this to the &lt;em&gt;project function&lt;/em&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;ss&quot;&gt;elixirc_options:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;warnings_as_errors:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;dialyzer:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;plt_file:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:no_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;priv/plts/dialyzer.plt&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;ignore_warnings:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.dialyzer_ignore.exs&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Which will be like:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;YourProject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;MixProject&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Project&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;project&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;# current configs...&lt;/span&gt;
+      
+      &lt;span class=&quot;ss&quot;&gt;elixirc_options:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;warnings_as_errors:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;dialyzer:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;ss&quot;&gt;plt_file:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:no_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;priv/plts/dialyzer.plt&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;ss&quot;&gt;ignore_warnings:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.dialyzer_ignore.exs&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deps&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;# current deps...&lt;/span&gt;
+
+      &lt;span class=&quot;c1&quot;&gt;# dev, test&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:credo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dialyxir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.0.0-rc.6&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:sobelow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 0.7&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I recommend reading &lt;a href=&quot;https://hexdocs.pm/dialyxir/0.4.1/readme.html&quot;&gt;dialyxir doc&lt;/a&gt; to know more about its config, especially the &lt;a href=&quot;https://github.com/jeremyjh/dialyxir#continuous-integration&quot;&gt;Continuous Integration&lt;/a&gt; if you want to enforce it on your CI/CD pipeline.&lt;/p&gt;
+
+&lt;p&gt;Continuing, let’s create an alias function in your mix.exs file, &lt;em&gt;if you don’t have this function already created&lt;/em&gt;, and add two aliases:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# current aliases...&lt;/span&gt;
+    
+    &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;format&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;sobelow --verbose&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;dialyzer&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+    &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;format --check-formatted&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;sobelow --exit&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;dialyzer --halt-exit-status&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I like using one alias specific for local development (quality) and one for CI/CD (quality.ci) because I have more freedom on the order of the tasks and its arguments. For example, on local development I don’t want to check if the code is formatted, I just format the code directly; and I like to see test results at the end. Adapt as you want.&lt;/p&gt;
+
+&lt;h3 id=&quot;dialyzer_ignoreexs&quot;&gt;.dialyzer_ignore.exs&lt;/h3&gt;
+
+&lt;p&gt;Create the file &lt;em&gt;.dialyzer_ignore.exs&lt;/em&gt; in the root dir of the project:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;:0:unknown_function Function ExUnit.Callbacks.__merge__/3 does not exist.&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;:0:unknown_function Function ExUnit.CaseTemplate.__proxy__/2 does not exist.&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Remember I said those tools may be annoying ? Specially the dialyzer. Don’t get me wrong, dialyzer is amazing and I believe you should use it, but sometimes you need to ignore a warning or two, and that’s the file where you can do that.&lt;/p&gt;
+
+&lt;p&gt;About the content of this file: we’ll run our aliases on the test environment (MIX_ENV=test) and dialyzer reclaim that those functions are errors, but that’s not a big deal and let’s just ignore it.&lt;/p&gt;
+
+&lt;h3 id=&quot;credo&quot;&gt;Credo&lt;/h3&gt;
+
+&lt;p&gt;You don’t need to change anything in order to make credo work, but the default rules may not be suitable for your project. You can change that using a &lt;a href=&quot;https://github.com/rrrene/credo#configuration-via-credoexs&quot;&gt;.credo.exs&lt;/a&gt; file or &lt;a href=&quot;https://github.com/rrrene/credo#inline-configuration-via-config-comments&quot;&gt;using special comments&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;gitignore&quot;&gt;.gitignore&lt;/h3&gt;
+
+&lt;p&gt;Add to .gitignore:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;# Dialyzer
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
+
+# Sobelow
+.sobelow
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Those files are environment-dependent.&lt;/p&gt;
+
+&lt;h2 id=&quot;executing&quot;&gt;Executing&lt;/h2&gt;
+
+&lt;p&gt;Finally, you’re ready to go! 😅&lt;/p&gt;
+
+&lt;p&gt;First, let’s create the dir where dialyzer will store plt files:&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;mkdir -p priv/plts&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;And then just execute in your terminal:&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MIX_ENV=test mix quality&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Take some time off and grab a coffee, the first execution will take some time to build all dialyzer artefacts, but those files will be cached, don’t worry.&lt;/p&gt;
+
+&lt;p&gt;And change your CI/CD pipeline to execute:&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MIX_ENV=test mix quality.ci&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Whenever this command finds an issue in your code, the CI/CD pipeline will halt and return a failure.&lt;/p&gt;
+
+&lt;h2 id=&quot;complete-example-files&quot;&gt;Complete example files&lt;/h2&gt;
+
+&lt;p&gt;&lt;em&gt;mix.exs&lt;/em&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;YourProject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;MixProject&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Project&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;project&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;app:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:your_project&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;version:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;0.1.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;elixir:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.6&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;elixirc_paths:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;elixirc_paths&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()),&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;elixirc_options:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;warnings_as_errors:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;compilers:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:gettext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;compilers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;start_permanent:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:prod&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;deps:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;dialyzer:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;ss&quot;&gt;plt_file:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:no_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;priv/plts/dialyzer.plt&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;ss&quot;&gt;ignore_warnings:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.dialyzer_ignore.exs&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Configuration for the OTP application.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Type `mix help compile.app` for more information.&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;application&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;mod:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;YourProject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Application&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]},&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;extra_applications:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:logger&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:runtime_tools&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Specifies which paths to compile per environment.&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;elixirc_paths&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;lib&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;test/support&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;elixirc_paths&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;lib&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Specifies your project dependencies.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Type `mix help deps` for examples and options.&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deps&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.4.3&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix_pubsub&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.1&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix_ecto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 4.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:ecto_sql&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 3.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:postgrex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;gt;= 0.0.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix_html&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 2.11&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix_live_reload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.2&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:gettext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 0.11&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+
+      &lt;span class=&quot;c1&quot;&gt;# dev, test&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:credo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dialyxir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 1.0.0-rc.6&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:sobelow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;~&amp;gt; 0.7&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;only:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:dev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;runtime:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Aliases are shortcuts or tasks specific to the current project.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# For example, to create, migrate and run the seeds file at once:&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;#     $ mix ecto.setup&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# See the documentation for `Mix` for more info on aliases.&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;format&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;sobelow --verbose&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;dialyzer&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;format --check-formatted&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;sobelow --exit&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;dialyzer --halt-exit-status&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.setup&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.create&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.migrate&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;run priv/repo/seeds.exs&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.reset&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.drop&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.setup&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;test:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.create --quiet&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;ecto.migrate&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;em&gt;.dialyzer_ignore.exs&lt;/em&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[
+  {&quot;:0:unknown_function Function ExUnit.Callbacks.__merge__/3 does not exist.&quot;},
+  {&quot;:0:unknown_function Function ExUnit.CaseTemplate.__proxy__/2 does not exist.&quot;}
+  ]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;em&gt;.gitignore&lt;/em&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run &quot;mix test --cover&quot;, coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where 3rd-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via &quot;mix archive.build&quot;).
+*.ez
+
+# Ignore package tarball (built via &quot;mix hex.build&quot;).
+your_project-*.tar
+
+# If NPM crashes, it generates a log, let's ignore it too.
+npm-debug.log
+
+# The directory NPM downloads your dependencies sources to.
+/assets/node_modules/
+
+# Since we are building assets from assets/,
+# we ignore priv/static. You may want to comment
+# this depending on your deployment strategy.
+/priv/static/
+
+# Files matching config/*.secret.exs pattern contain sensitive
+# data and you should not commit them into version control.
+#
+# Alternatively, you may comment the line below and commit the
+# secrets files as long as you replace their contents by environment
+# variables.
+/config/*.secret.exs
+
+.elixir_ls
+
+# Dialyzer
+/priv/plts/*.plt
+/priv/plts/*.plt.hash%
+
+# Sobelow
+.sobelow
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;references&quot;&gt;References&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;a href=&quot;https://pragprog.com/book/tvmelixir/adopting-elixir&quot;&gt;Adopting Elixir - From Concept to Production&lt;/a&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;a href=&quot;https://blog.dnsimple.com/2018/10/elixir-dialyzer-in-ci/&quot;&gt;https://blog.dnsimple.com/2018/10/elixir-dialyzer-in-ci/&lt;/a&gt;&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</content><author><name>Leandro Cesquini Pereira</name></author><summary type="html">Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a mix alias that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading.</summary></entry><entry><title type="html">How to update objects inside JSONB arrays with PostgreSQL</title><link href="https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/" rel="alternate" type="text/html" title="How to update objects inside JSONB arrays with PostgreSQL" /><published>2019-04-15T00:00:00-03:00</published><updated>2019-04-15T00:00:00-03:00</updated><id>https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql</id><content type="html" xml:base="https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/">&lt;h2 id=&quot;how-to-update-a-specific-value-on-a-jsonb-array&quot;&gt;How to update a specific value on a JSONB array&lt;/h2&gt;
+
+&lt;p&gt;Let’s say you decided to store data in the database as json or jsonb and discovered that you just created new problems for yourself that you didn’t have before. You’re not alone.&lt;/p&gt;
+
+&lt;p&gt;JSONB is a powerful tool, but it comes at some cost because you need to adapt the way you query and handle the data.&lt;/p&gt;
+
+&lt;p&gt;And it’s not rare to load the entire jsonb object into memory, transform it using your preferred programming language, and then saving it back to the database. But, you just created another problem: performance bottlenecks and resource waste.&lt;/p&gt;
+
+&lt;p&gt;In this article let’s see how to update a specific value of an object inside an array with one query.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;TL;DR&lt;/strong&gt;: the final query is at the end of the article, and you can check out a live example at &lt;a href=&quot;https://www.db-fiddle.com/f/e8aeGk7cRNYnpjsqi1ncrs/1&quot;&gt;DB Fiddle&lt;/a&gt; to copy &amp;amp; paste and play with.&lt;/p&gt;
+
+&lt;p&gt;Suppose you’re implementing a customer screen to store dynamic contacts for each customer. Then you come up with the idea of storing the contacts as a JSONB column because they’re dynamic, and thus using a not relational data structure makes sense.&lt;/p&gt;
+
+&lt;p&gt;Then you create a customers table with a JSONB contacts column and insert some data into it:&lt;/p&gt;
+
+&lt;div class=&quot;language-sql highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;create&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;table&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customers&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;varchar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;256&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;contacts&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;jsonb&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;insert&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;into&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customers&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;contacts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;values&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;s1&quot;&gt;'Jimi'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s1&quot;&gt;'[
+    {&quot;type&quot;: &quot;phone&quot;, &quot;value&quot;: &quot;+1-202-555-0105&quot;},
+    {&quot;type&quot;: &quot;email&quot;, &quot;value&quot;: &quot;jimi@gmail.com&quot;}
+  ]'&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;insert&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;into&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customers&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;contacts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;values&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;s1&quot;&gt;'Janis'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s1&quot;&gt;'[
+	{&quot;type&quot;: &quot;email&quot;, &quot;value&quot;: &quot;janis@gmail.com&quot;}
+   ]'&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Pretty easy right? But how can you update a specific contact for a specific customer? How to change Jimi’s email or Janis’ phone? 🤔&lt;/p&gt;
+
+&lt;p&gt;Fortunately, PostgreSQL is your friend and provides the &lt;em&gt;jsonb_set&lt;/em&gt; function:&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;jsonb_set(target jsonb, path text[], new_value jsonb[, create_missing boolean])&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Given a jsonb column, you can set a new value on the specified path:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/posts/sql-jsonb-1.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Reference: &lt;a href=&quot;https://www.postgresql.org/docs/9.5/functions-json.html&quot;&gt;PostgreSQL Json functions&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;The above selects will return:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  [{&quot;type&quot;: &quot;phone&quot;, &quot;value&quot;: &quot;+1–202–555–0105&quot;}, {&quot;type&quot;: &quot;email&quot;, &quot;value&quot;: &quot;jimi.hendrix@gmail.com&quot;}]
+  [{&quot;type&quot;: &quot;email&quot;, &quot;value&quot;: &quot;janis.joplin@gmail.com&quot;}]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;To change Jimi’s email on the contacts list, you inform the path &lt;code class=&quot;highlighter-rouge&quot;&gt;1, value&lt;/code&gt; which means the second object on the array (starting at 0) and the key &lt;strong&gt;value&lt;/strong&gt;. That’s the &lt;em&gt;path&lt;/em&gt;. The same applies to change Janis’ email, but its email object is at index 0.&lt;/p&gt;
+
+&lt;p&gt;You may be thinking: I just have to use jsonb_set on an update statement and it’s all done? That’s the idea, but that’s not enough yet.&lt;/p&gt;
+
+&lt;p&gt;The problem with non-relational data is that they’re dynamic. Well, that’s one of the reasons for using JSONB but that brings a problem: see that Jimi’s email object is at index 1 and Janis’ email object is at index 0 in the array, and another customer could have a very different array with different indexes. So, how can you discover the index of each contact type? 🤔&lt;/p&gt;
+
+&lt;p&gt;The answer is ordering the elements of the array and getting its index:&lt;/p&gt;
+
+&lt;div class=&quot;language-sql highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;select&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;index&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customers&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;jsonb_array_elements&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;contacts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;with&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;ordinality&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;arr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;contact&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+ &lt;span class=&quot;k&quot;&gt;where&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;contact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'type'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'email'&lt;/span&gt;
+   &lt;span class=&quot;k&quot;&gt;and&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;name&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'Jimi'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;That query returns &lt;strong&gt;1&lt;/strong&gt;, which is the &lt;em&gt;index&lt;/em&gt; of the email object (type email) inside the contacts array of the customer Jimi.&lt;/p&gt;
+
+&lt;p&gt;Now we have all the pieces of the puzzle: we know how to update a jsonb value and how to discover the index of the object to be updated.&lt;/p&gt;
+
+&lt;p&gt;The only step left is the update itself. Putting it all together we have:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/posts/sql-jsonb-2.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The most important part of this query is the &lt;code class=&quot;highlighter-rouge&quot;&gt;with&lt;/code&gt; block. It’s a powerful resource, but for this example, you can think of it as a “way to store a variable” that is the &lt;em&gt;path&lt;/em&gt; of the contact you need to update, which will be dynamic depending on the record.&lt;/p&gt;
+
+&lt;p&gt;Let me explain a bit about this part:&lt;/p&gt;
+
+&lt;div class=&quot;language-sql highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'{'&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;||&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;||&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;',value}'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;text&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;path&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;It just builds the path as &lt;code class=&quot;highlighter-rouge&quot;&gt;'{1, value}'&lt;/code&gt;, but we need to convert to &lt;code class=&quot;highlighter-rouge&quot;&gt;text[]&lt;/code&gt; because that’s the type expected on the &lt;code class=&quot;highlighter-rouge&quot;&gt;jsonb_path&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;h3 id=&quot;wrapping-up&quot;&gt;Wrapping up&lt;/h3&gt;
+
+&lt;p&gt;JSONB is a great and valuable tool to resolve a lot of problems. But keep in mind that you also need to query and update this kind of data. That brings a cost that you have to consider when deciding which tools you pick to use.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Side note: that solution came out of a pair programming session with &lt;a href=&quot;https://twitter.com/lcegatti&quot;&gt;Lucas Cegatti&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><summary type="html">How to update a specific value on a JSONB array</summary></entry><entry><title type="html">Implementing Bounded Contexts in Elixir</title><link href="https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/" rel="alternate" type="text/html" title="Implementing Bounded Contexts in Elixir" /><published>2018-10-25T00:00:00-03:00</published><updated>2018-10-25T00:00:00-03:00</updated><id>https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir</id><content type="html" xml:base="https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/">&lt;p&gt;What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled &lt;a href=&quot;http://blog.plataformatec.com.br/2015/06/elixir-in-times-of-microservices/&quot;&gt;Elixir in times of microservices&lt;/a&gt;, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;TL;DR&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Create an umbrella project;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;One app for each bounded context;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;An app should never call internal code from another app;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Use a module on each app to act as a public API to exchange data between apps, and also to call functions to mutate data;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;An app should never return its internal data structures on public apis, it should return only raw data like &lt;em&gt;maps&lt;/em&gt; and &lt;em&gt;lists&lt;/em&gt;;&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;first-of-all-whats-a-bounded-context-&quot;&gt;First of all, what’s a Bounded Context ?&lt;/h2&gt;
+
+&lt;p&gt;&lt;em&gt;If you know nothing about it, I recommend to read &lt;a href=&quot;https://martinfowler.com/bliki/BoundedContext.html&quot;&gt;this Martin Fowler article&lt;/a&gt; before continuing.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;According to the great book &lt;a href=&quot;https://pragprog.com/book/swdddf/domain-modeling-made-functional&quot;&gt;Domain Modeling Made Functional&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;[…] domains and subdomains in the problem space are mapped to what DDD terminology calls bounded contexts — a kind of subsystem in our implementation. Each bounded context is a mini domain model in its own right. We use the phrase bounded context instead of something like subsystem because it helps us stay focused on what’s important when we design a solution: being aware of the context and being aware of the boundaries.
+Why context? Because each context represents some specialized knowledge in the solution. Within the context, we share a common language and the design is coherent and unified. But, just as in the real world, information taken out of context can be confusing or unusable.
+Why bounded? In the real world, domains have fuzzy boundaries, but in the world of software we want to reduce coupling between separate subsystems so that they can evolve independently. We can do this using standard software practices, such as having explicit APIs between subsystems and avoiding dependencies such as shared code.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;That give us some hints on how we should implement a bounded context:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Should be independent&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Should have an explict API to exchange data&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Avoid shared code&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;umbrella-projects&quot;&gt;Umbrella Projects&lt;/h2&gt;
+
+&lt;p&gt;If you know the concept of &lt;a href=&quot;https://elixir-lang.org/getting-started/mix-otp/dependencies-and-umbrella-projects.html#umbrella-projects&quot;&gt;umbrella projects,&lt;/a&gt; you may be thinking that we can implement each bounded context as applications of an umbrella project. And you’re right, but some rules are required in order to keep clean organization and avoid creating a mess that is hard to evolve.&lt;/p&gt;
+
+&lt;p&gt;But what’s an umbrella project and apps ?&lt;/p&gt;
+
+&lt;p&gt;An app is just a package of code, it could be a tiny library, a component, a subsystem or a full application. An ERP system can be composed of apps like Customer, Billing, Delivery and so on.&lt;/p&gt;
+
+&lt;p&gt;And an umbrella project is a project composed of those apps, which lives in the same project and can be dependent on each other.&lt;/p&gt;
+
+&lt;p&gt;Want to read more about it ? Go to &lt;a href=&quot;https://8thlight.com/blog/georgina-mcfadyen/2017/05/01/elixir-umbrella-projects.html&quot;&gt;Using an Elixir Umbrella&lt;/a&gt; post.&lt;/p&gt;
+
+&lt;h2 id=&quot;show-me-the-code&quot;&gt;Show me the code&lt;/h2&gt;
+
+&lt;p&gt;Enough talking, let’s see how it works. And let’s use the same example from Martin Fowler article to establish an example that we can use for our system.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/posts/bounded_contexts.png&quot; alt=&quot;Bounded Context example from Martin Fowler article&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Bounded Context example from Martin Fowler article&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;In this example we have 2 bounded contexts, &lt;em&gt;Sales&lt;/em&gt; and &lt;em&gt;Support&lt;/em&gt;, with their own rules and knowledge. Remember that each context should be independent, so let’s start by creating a new Elixir umbrella project called “SystemX” with two apps:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;➜ mix new system_x --umbrella
+➜ cd system_x/apps
+➜ mix new sales
+➜ mix new support
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;You’ll end up with the following directory structure:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;➜ tree
+.
+├── README.md
+├── apps
+│   ├── sales
+│   │   ├── README.md
+│   │   ├── config
+│   │   │   └── config.exs
+│   │   ├── lib
+│   │   │   └── sales.ex
+│   │   ├── mix.exs
+│   │   └── test
+│   │       ├── sales_test.exs
+│   │       └── test_helper.exs
+│   └── support
+│       ├── README.md
+│       ├── config
+│       │   └── config.exs
+│       ├── lib
+│       │   └── support.ex
+│       ├── mix.exs
+│       └── test
+│           ├── support_test.exs
+│           └── test_helper.exs
+├── config
+│   └── config.exs
+└── mix.exs
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;entities&quot;&gt;Entities&lt;/h3&gt;
+
+&lt;p&gt;As you can see in our domain, we have the entity Customer on both Sales and Support context. That’s because each context may have specific rules or data and evolve independently, which give us leverage to modify each one of them without breaking the whole system, because it’s limited to the inner context.&lt;/p&gt;
+
+&lt;p&gt;Let’s define each Customer:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# apps/sales/lib/domain/customer.ex&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Sales&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Customer&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defstruct&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:address&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:score&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:has_support_ticket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# apps/support/lib/domain/customer.ex&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Support&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Customer&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defstruct&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:last_ticket_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:email&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;public-api&quot;&gt;Public API&lt;/h3&gt;
+
+&lt;p&gt;And what happens if the Sales context needs to get some information from the Customer on the Support context ? That’s when the explict API comes in handy. Let’s say we need to know if a Customer has a support ticket, then we need to ask this information for the Support context. So, let’s create the Support explicit API to return a Customer:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# apps/support/lib/support.ex&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Support&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;when&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is_integet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;find&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# get customer from db&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;from_struct&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Returning a &lt;em&gt;map&lt;/em&gt; instead of a &lt;em&gt;struct&lt;/em&gt; is what give us loose coupling between apps. We will talk more about it in a moment.&lt;/p&gt;
+
+&lt;h3 id=&quot;putting-into-practice&quot;&gt;Putting into practice&lt;/h3&gt;
+
+&lt;p&gt;Now, let’s create a service in the Sales context that calculates the current customer’s score. The business rule is: It gives a higher score if the customer has no ticket support (&lt;em&gt;I know it’s not the best example in the world…&lt;/em&gt;)&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# apps/sales/lib/client/support.ex&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Sales&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Client&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Support&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;alias&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Sales&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(%&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;id:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;customer_has_support_ticket&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Support&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get_customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;has_support_ticket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+      
+    &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;has_support_ticket:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer_has_support_ticket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;has_support_ticket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;last_ticket_id:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;last_ticket_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;when&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is_nil&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;last_ticket_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;has_support_ticket&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# apps/sales/lib/service/customer.ex&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Sales&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Service&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Customer&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;alias&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Sales&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;alias&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Sales&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Client&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;current_score&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(%&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Domain&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Client&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Support&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get_customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;has_support_ticket&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100&lt;/span&gt;
+      &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;50&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ok, there’s more than just a simple service. Let me explain.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/img/posts/contexts.png&quot; alt=&quot;Contexts API&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Apps are allowed to comunicate with each other only by a public API. Boxes in gray are for internal use only.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;A Customer entity in the Sales context knows nothing about support tickets, as expected because this information is of responsability of the Support context, however we need it to build our service &lt;code class=&quot;highlighter-rouge&quot;&gt;Sales.Service.Customer&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;To overcome this lack of information in the Sales context we can ask the Support context for this information, but remember that we can’t share code between apps nor call internal code from another app. That’s the objective of a public API and the reason it can only return raw data like &lt;em&gt;maps&lt;/em&gt; and &lt;em&gt;lists&lt;/em&gt; instead of returning an internal &lt;em&gt;struct&lt;/em&gt; from Support app.&lt;/p&gt;
+
+&lt;p&gt;But we don’t want a meaningless &lt;em&gt;map&lt;/em&gt; being used internally in Sales app, we actually want that our domain reflect the real life by mapping it to a &lt;em&gt;struct&lt;/em&gt;, which is done in &lt;code class=&quot;highlighter-rouge&quot;&gt;Sales.Client.Support&lt;/code&gt; — receives a &lt;em&gt;map&lt;/em&gt;, use the information it needs and fullfill &lt;code class=&quot;highlighter-rouge&quot;&gt;Sales.Domain.Customer&lt;/code&gt;. Note that in &lt;code class=&quot;highlighter-rouge&quot;&gt;Sales.Domain.Customer&lt;/code&gt; we don’t keep the attribute &lt;em&gt;last_ticket_id&lt;/em&gt; because we don’t care about the actual ticket id in the Sales context, we just need to know if it’s empty or not. Remember that the same entity from the real world may have different attributes according to the context.&lt;/p&gt;
+
+&lt;p&gt;Converting the data structure on the boundaries makes the &lt;em&gt;service layer&lt;/em&gt; cleaner and easier to write and understand because in layers below the public API we deal with validated data structures prepared for the current context, which means you don’t need to worry with dirty data, which frees us from writing conditional code.&lt;/p&gt;
+
+&lt;h3 id=&quot;maintenance&quot;&gt;Maintenance&lt;/h3&gt;
+
+&lt;p&gt;And there’s one more reason to do this kind of data convertion on the boundary: maintenance.&lt;/p&gt;
+
+&lt;p&gt;What would happen if you used the struct &lt;code class=&quot;highlighter-rouge&quot;&gt;Support.Domain.Customer&lt;/code&gt; all over your Sales context in services, domain, tests and so on… and for some reason you had to rename the attribute &lt;em&gt;last_ticket_id&lt;/em&gt; to any other name ? Yeah, that’s right… you’d have to change a lot of code. But using a client allows you to handle this scenario in the client while keeping the &lt;em&gt;struct&lt;/em&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Sales.Domain.Customer&lt;/code&gt; exactly the same, avoiding a major refactor. Just the client layers changes. It’s a simple example but I think it’s enough to get the ideia.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;How to organize the internal context code is not in the scope of this article.&lt;/em&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;contract&quot;&gt;Contract&lt;/h3&gt;
+
+&lt;p&gt;You may be wondering: if the public API returns a &lt;em&gt;map&lt;/em&gt;, how can I know the content (contract) of this &lt;em&gt;map&lt;/em&gt; ? Which attribures are present or not, which data type I should expect and so on ? And how can I know if the call was successful ? The answer is: use &lt;a href=&quot;https://hexdocs.pm/elixir/typespecs.html&quot;&gt;Typespecs&lt;/a&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Support&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;@type&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;id:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;integer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;last_ticket_id:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;integer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;@spec&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;integer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:error&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;binary&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;when&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is_integet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;customer_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# your logic here ...&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# return the common pattern {:ok, data} or {:error, data}&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;customer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Typespecs is about transparency. You know what to expect from calling the function and also what that function expects as parameter. And it also has the advantage to generate an useful documentation using &lt;a href=&quot;https://github.com/elixir-lang/ex_doc&quot;&gt;ex_doc&lt;/a&gt; library or even a live documentation by using text editors that supports that.&lt;/p&gt;
+
+&lt;p&gt;However it does not enforce an “automatic data validation”, that means you can pass an &lt;em&gt;Integer&lt;/em&gt; even if the typespec says that it’s expecting an &lt;em&gt;String&lt;/em&gt;. To assist you in the task of obeying the contract, I recommend using &lt;a href=&quot;https://github.com/jeremyjh/dialyxir&quot;&gt;Dialyxir&lt;/a&gt; that tool will do a static code analysis and warn you if anything is out of expected.&lt;/p&gt;
+
+&lt;h2 id=&quot;when-should-i-use-an-umbrella-app-&quot;&gt;When should I use an umbrella app ?&lt;/h2&gt;
+
+&lt;p&gt;Putting everything inside just one app or splitting each part into umbrella apps is a question of balance and following some rules. Creating many apps may be overkill, but it’s worth considering creating a new app in some cases:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;That part of the system is developed by another team, be it an internal or offshore team in the same company or an outsourced team.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;That part of the system is shared between more than one app. That’s a more common scenario for shared libs.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;That part of the system needs to be deployed separately in another server or in a different permission schema (some are public and some are private). — &lt;a href=&quot;https://hexdocs.pm/distillery/introduction/understanding_releases.html&quot;&gt;Distillery releases&lt;/a&gt; can help you with that.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Need to use more than one framework in the same system.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Everything else can live in the same app perfectly.&lt;/p&gt;
+
+&lt;h2 id=&quot;a-note-about-umbrella-projects&quot;&gt;A note about umbrella projects&lt;/h2&gt;
+
+&lt;p&gt;An umbrella project may get out of control if you don’t follow some rules like we discussed here. Think in each app as being isolated, ie: you can remove it from umbrella without breaking too many things. That’s the reason we can’t call internal functions from another app and need to rely on a public API.&lt;/p&gt;
+
+&lt;p&gt;There’s nothing in Elixir that forbids or prevents you from calling internal code from another app, instead of only using the public API. That’s a convention you’d have to adopt and always review the code to not break this rule.&lt;/p&gt;
+
+&lt;p&gt;Another commom issue with umbrella projects is circular dependencies that happens when app A depends on app B and for some reason you also try to make B depends on A. Then you get a circular dependency error. You have to carefully design the &lt;a href=&quot;https://markhneedham.com/blog/2009/03/30/ddd-recognising-relationships-between-bounded-contexts/&quot;&gt;relationship between your bounded contexts&lt;/a&gt; to avoid this situation.&lt;/p&gt;
+
+&lt;p&gt;Another observation it that not everybody likes working with umbrella projects, and that’s fine. The same ideia and rules applies if you work with separated apps.&lt;/p&gt;
+
+&lt;p&gt;Summing up, umbrella project sits between monolithic and microservices. And if done right, you gain the best of both worlds.&lt;/p&gt;
+
+&lt;h2 id=&quot;bonus-distributed-apps&quot;&gt;Bonus: distributed apps&lt;/h2&gt;
+
+&lt;p&gt;Umbrella project is a good way to start a new project and get things running, but it has &lt;a href=&quot;https://elixir-lang.org/getting-started/mix-otp/dependencies-and-umbrella-projects.html#dont-drink-the-kool-aid&quot;&gt;known issues&lt;/a&gt; that may cause problems in the future. But don’t worry too much about it because the approach discussed here can evolve to break apart those apps into distributed apps by implementing each public API as a GenServer, which can be global registered using tools like &lt;a href=&quot;https://github.com/bitwalker/swarm&quot;&gt;Swarm&lt;/a&gt; or &lt;a href=&quot;https://github.com/derekkraan/horde&quot;&gt;Horde&lt;/a&gt;. But that’s subject to another post, let me know if you want to hear more about it.&lt;/p&gt;
+
+&lt;h2 id=&quot;what-i-didnt-say&quot;&gt;What I didn’t say&lt;/h2&gt;
+
+&lt;p&gt;Domain Types, Anti-Corruption Layers, CQRS, DTOs, Sagas, CRDT and some other techniques and patterns can be useful in this kind of architecture, but I can’t talk about everything in just one article and you &lt;a href=&quot;https://en.wikipedia.org/wiki/Fundamental_theorem_of_software_engineering&quot;&gt;may not need all of it&lt;/a&gt;. Keep in mind the first and most important step is to organize your project to enable it to evolve in a agile way.&lt;/p&gt;
+
+&lt;p&gt;Thanks &lt;a href=&quot;https://twitter.com/eduardodeoh&quot;&gt;Eduardo Hernandes&lt;/a&gt; for the hours discussing Elixir, DDD and some crazy stuff and also for reviewing this article.&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><summary type="html">What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled Elixir in times of microservices, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter.</summary></entry><entry><title type="html">Elixir — quick reference for debugging techniques</title><link href="https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques/" rel="alternate" type="text/html" title="Elixir — quick reference for debugging techniques" /><published>2018-05-17T00:00:00-03:00</published><updated>2018-05-17T00:00:00-03:00</updated><id>https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques</id><content type="html" xml:base="https://leandrocp.com.br/2018/05/elixir-quick-reference-for-debugging-techniques/">&lt;p&gt;&lt;a href=&quot;https://elixir-lang.org/getting-started/debugging.html&quot;&gt;Much&lt;/a&gt; &lt;a href=&quot;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang/&quot;&gt;has&lt;/a&gt; &lt;a href=&quot;https://speakerdeck.com/gcauchon/debugging-elixir-efficently&quot;&gt;been&lt;/a&gt; said about Elixir debugging techniques, but in this post, I’d like to give a quick overview of all possible options to serve as a go-to reference when you need to debug Elixir code. Enough talking, let’s check each of them:&lt;/p&gt;
+
+&lt;h2 id=&quot;ioinspect&quot;&gt;IO.inspect&lt;/h2&gt;
+
+&lt;p&gt;The simplest technique:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;my_list&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;IO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;my_list&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# Outputs&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://hexdocs.pm/elixir/IO.html#inspect/2&quot;&gt;IO.inspect/2&lt;/a&gt;can also be used inside pipelines because &lt;a href=&quot;https://github.com/elixir-lang/elixir/blob/v1.6.5/lib/elixir/lib/io.ex#L311&quot;&gt;it returns the item passed to be inspected&lt;/a&gt;. And the tip here is to use the option label:to output a string identifying each inspect:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;label:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;before&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Enum&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;&amp;amp;1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;label:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;after&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Enum&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# Outputs&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;before:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;after&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;ioinspect-with-binding&quot;&gt;IO.inspect with binding&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://hexdocs.pm/elixir/Kernel.html#binding/1&quot;&gt;binding/1&lt;/a&gt; is very useful when you want to see all variable names and values of the current function:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;some_fun&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;IO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;binding&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;some_fun&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;bar&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:baz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;a:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;b:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;bar&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;c:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:baz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;apex&quot;&gt;apex&lt;/h2&gt;
+
+&lt;p&gt;Similar to IO.inspect/2, &lt;a href=&quot;https://github.com/BjRo/apex&quot;&gt;apex&lt;/a&gt; is a lib worth mentioning especially because of its &lt;a href=&quot;https://github.com/BjRo/apex#awesome-def-aka-adef&quot;&gt;adef&lt;/a&gt; macro:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# import apex adef macro&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Apex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;AwesomeDef&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# change def to adef&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;adef&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;options&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;\\&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# when you call your function, you'll receive detailed information about its execution&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Apex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;test&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;foo&quot;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;Function&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Elixir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Apex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;test&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;was&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;called&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;defined&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Users&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bjoernrochel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Coding&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Laboratory&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;apex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lib&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;apex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;ex:&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;12&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;----------------------------------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;Parameters:&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;----------------------------------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;foo&quot;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+&lt;span class=&quot;o&quot;&gt;----------------------------------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;Result:&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;----------------------------------------------------------------------------------------------------&lt;/span&gt;
+&lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;foo&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;iexpry&quot;&gt;IEx.pry&lt;/h2&gt;
+
+&lt;p&gt;But it can be very tedious and be limiting to debug with just data inspection likeIO.inspect or apex, that’s when &lt;a href=&quot;https://hexdocs.pm/iex/IEx.html#pry/0&quot;&gt;IEx.pry/0&lt;/a&gt; comes at hand because it allows you to pry into the current code. Put the following code at the line you want to pry:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;some_fun&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;kn&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IEx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IEx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pry&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;And now execute your code inside an IEx session: iex -S mix or iex -S mix phx.server if you are using Phoenix Framework. Tip: if you are running tasks like database seeds, you can pry into that code by running iex -S mix run priv/repo/seeds.exs or any other script.&lt;/p&gt;
+
+&lt;p&gt;Once the code execution gets to the point of IEx.pry , an interactive shell opens and allow you to interact with the current code.&lt;/p&gt;
+
+&lt;p&gt;Go to &lt;a href=&quot;https://medium.com/@diamondgfx/debugging-phoenix-with-iex-pry-5417256e1d11&quot;&gt;Debugging Phoenix with IEx.pry&lt;/a&gt; if you want more tips about debugging Phoenix with IEx.pry.&lt;/p&gt;
+
+&lt;h2 id=&quot;debugger&quot;&gt;:debugger&lt;/h2&gt;
+
+&lt;p&gt;Pretty much the same as IEx.pry which stops the execution at the break point and allows you to inspect the current code, but &lt;a href=&quot;http://erlang.org/doc/apps/debugger/debugger_chapter.html&quot;&gt;:debugger&lt;/a&gt; gives you a nice visual interface, like the ones in IDEs:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://blog.plataformatec.com.br/wp-content/uploads/2016/04/debugger-elixir.gif&quot; alt=&quot;gif from http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang/)&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;gif from &lt;a href=&quot;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang&quot;&gt;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;To open this debugger, you need to start it and set a break point:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# given that you have this module&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;MyApp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# start a new iex session&lt;/span&gt;
+&lt;span class=&quot;err&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;S&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mix&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# then start :debugger&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:debugger&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# prepare your module for debugging&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:int&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ni&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;MyApp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# set a break point at the line you want to capture&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:int&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;break&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;MyApp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# and finally call your function&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;MyApp&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;sysget_state-and-sysget_status&quot;&gt;:sys.get_state and :sys.get_status&lt;/h2&gt;
+
+&lt;p&gt;This one works only for processes. As the name suggests, &lt;a href=&quot;http://erlang.org/doc/man/sys.html#get_state-1&quot;&gt;:sys.get_state/1&lt;/a&gt;gets the current state of a process, and not only from a GenServer but also from any kind of process:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start_link&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;ping:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;pong&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:sys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get_state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;ping:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;pong&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Snippet extracted from &lt;a href=&quot;https://til.hashrocket.com/posts/urmxev1dh5-looking-at-the-state-of-processes-in-elixir&quot;&gt;Looking at the state of processes in Elixir&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;If you need more data than just the current state, just call &lt;a href=&quot;http://erlang.org/doc/man/sys.html#get_status-1&quot;&gt;:sys.get_status/1&lt;/a&gt; , which will return whole process information:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+&lt;span class=&quot;c1&quot;&gt;# Excerpt From: Dave Thomas. “Programming Elixir ≥ 1.6&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Snnipet extracted from &lt;a href=&quot;https://pragprog.com/book/elixir/programming-elixir&quot;&gt;Programming Elixir book&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Bonus: you can replace a process state at runtime using &lt;a href=&quot;http://erlang.org/doc/man/sys.html#replace_state-2&quot;&gt;:sys.replace_state/2&lt;/a&gt; , which can be very handy to test some specific situation.&lt;/p&gt;
+
+&lt;h2 id=&quot;processinfo&quot;&gt;Process.info&lt;/h2&gt;
+
+&lt;p&gt;You can also use &lt;a href=&quot;https://hexdocs.pm/elixir/Process.html#info/1&quot;&gt;Process.info/1&lt;/a&gt; to get information about a specific process:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start_link&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;ping:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;pong&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;info&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;current_function:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:gen_server&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:loop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;initial_call:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:proc_lib&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:init_p&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;status:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:waiting&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;message_queue_len:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;messages:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[],&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;links:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;#PID&amp;lt;0.610.0&amp;gt;],&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;dictionary:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;$initial_call&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:init&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;$ancestors&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;#PID&amp;lt;0.610.0&amp;gt;, #PID&amp;lt;0.70.0&amp;gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;trap_exit:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;error_handler:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:error_handler&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;priority:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:normal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;group_leader:&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;#PID&amp;lt;0.60.0&amp;gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;total_heap_size:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;233&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;heap_size:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;233&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;stack_size:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;reductions:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;27&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;garbage_collection:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;ss&quot;&gt;max_heap_size:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;error_logger:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;kill:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;size:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;ss&quot;&gt;min_bin_vheap_size:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;46422&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;ss&quot;&gt;min_heap_size:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;233&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;ss&quot;&gt;fullsweep_after:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;65535&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;ss&quot;&gt;minor_gcs:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;suspending:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;systrace&quot;&gt;:sys.trace&lt;/h2&gt;
+
+&lt;p&gt;Still talking about process debug, another resource we have is &lt;a href=&quot;http://erlang.org/doc/man/sys.html#trace-2&quot;&gt;:sys.trace/2&lt;/a&gt;to trace process calls, which will display each call and state change of the calling process:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:sys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trace&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;call&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;​&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:next_number&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;​&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DBG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0.69&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;got&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;call&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;next_number&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0.25&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;DBG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0.69&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sent&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;105&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0.25&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;106&lt;/span&gt;
+&lt;span class=&quot;m&quot;&gt;105&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# Excerpt From: Dave Thomas. “Programming Elixir ≥ 1.6” iBooks. &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;distillery-commands&quot;&gt;Distillery commands&lt;/h2&gt;
+
+&lt;p&gt;After you deploy your application as a package release, it may be very helpful to get information about it, specially if something is not working as expected. If you have deployed using &lt;a href=&quot;https://github.com/bitwalker/distillery&quot;&gt;Distillery&lt;/a&gt;, you’ll soon discover that mix does not work the same way as in your local machine, and that’s expected. But you can execute some commands on that release by calling &lt;code class=&quot;highlighter-rouge&quot;&gt;bin/&amp;lt;app_name&amp;gt; &amp;lt;command&amp;gt;&lt;/code&gt;, the two more useful commands are: &lt;code class=&quot;highlighter-rouge&quot;&gt;remote_console&lt;/code&gt; to start an IEx session on the running release and help to give you a list of all &lt;a href=&quot;https://github.com/bitwalker/distillery/tree/1.5.2/priv/libexec/commands&quot;&gt;commands&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;observer&quot;&gt;:observer&lt;/h2&gt;
+
+&lt;p&gt;Although it’s not exactly a debug tool, it’s worth mentioning that &lt;a href=&quot;http://erlang.org/doc/man/observer.html&quot;&gt;:observer&lt;/a&gt; helps you get an overview of the running system. I’ll not dig into details because there are a lot of articles that already do that, so I’ll just leave here the function call to start the observer:&lt;/p&gt;
+
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:observer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;notes-and-sources&quot;&gt;Notes and sources&lt;/h3&gt;
+
+&lt;p&gt;If you have more tips and techniques, please leave a comment so I can update this post and help spread more Elixir knowledge. :)&lt;/p&gt;
+
+&lt;p&gt;Some code snippets were extracted from the great official documentation or from the &lt;a href=&quot;https://elixir-lang.org/getting-started/introduction.html&quot;&gt;official getting started tutorial&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The book &lt;a href=&quot;https://pragprog.com/book/elixir/programming-elixir&quot;&gt;Programming Elixir&lt;/a&gt; was also used as source.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://til.hashrocket.com/&quot;&gt;Today I Learned&lt;/a&gt; from Hashrocket is also a great source of tips.&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><summary type="html">Much has been said about Elixir debugging techniques, but in this post, I’d like to give a quick overview of all possible options to serve as a go-to reference when you need to debug Elixir code. Enough talking, let’s check each of them:</summary></entry><entry><title type="html">Elixir - Usando Pattern Matching para melhorar seu código</title><link href="https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo/" rel="alternate" type="text/html" title="Elixir - Usando Pattern Matching para melhorar seu código" /><published>2016-04-16T00:00:00-03:00</published><updated>2016-04-16T00:00:00-03:00</updated><id>https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo</id><content type="html" xml:base="https://leandrocp.com.br/2016/04/usando-pattern-matching-para-melhorar-codigo/">&lt;p&gt;Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos &lt;a href=&quot;http://elixir-lang.org/getting-started/pattern-matching.html&quot;&gt;vários&lt;/a&gt; &lt;a href=&quot;https://elixirschool.com/pt/lessons/basics/pattern-matching/&quot;&gt;materiais&lt;/a&gt; e &lt;a href=&quot;http://philipsampaio.com.br/blog/2015/01/08/10-exemplos-de-pattern-matching-em-elixir&quot;&gt;artigos&lt;/a&gt; que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar.&lt;/p&gt;
+
+&lt;p&gt;Neste artigo vou mostrar uma forma de usar Pattern Matching que me fez perceber como este recurso é poderoso e elegante. Vamos começar com um exemplo de código simples.&lt;/p&gt;
+
+&lt;p&gt;Quem nunca escreveu um código assim ?&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;id: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;cartao_fidelidade: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;email: &lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'cliente@pizzaria.com'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;desconto_pedido&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;produto: &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pizza&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;cliente: &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# Aplica 5% de desconto no valor do produto caso o cliente possua o cartão fidelidade.&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Caso não possua, envia email de marketing para oferecer o cartão fidelidade.&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Retorna o valor calculado do desconto&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;produto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;cartao_fidelidade&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calcular_valor_desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;produto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;email&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;enviar_marketing_fidelidade&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;email&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;À primeira vista é um código inofensivo, mas este projeto irá crescer e o excesso de condicionais pode se tornar um problema na manutenção e evolução da base de código. Imagine que no futuro o sistema precise calcular desconto no primeiro pedido do cliente, ou que além de email deve enviar SMS, ou ainda aplicar desconto progressivo no desconto… acho que ficou claro onde mora o perigo.&lt;/p&gt;
+
+&lt;p&gt;Você já sabe que Pattern Matching, como o próprio nome diz, serve para casar padrões. Então como podemos reescrever nosso método &lt;code class=&quot;highlighter-rouge&quot;&gt;desconto&lt;/code&gt; para que fique mais legível e compreensível ? Pattern Matching!&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-elixir&quot; data-lang=&quot;elixir&quot;&gt;&lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;id:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;cartao_fidelidade:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;email:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'cliente@pizzaria.com'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pedido&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pizza&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;produto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;cartao_fidelidade:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;email:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;nil&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;produto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;cartao_fidelidade:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;email:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;email_cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;enviar_marketing_fidelidade&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;email_cliente&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;produto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;cartao_fidelidade:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;calcular_valor_desconto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;produto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;O &lt;a href=&quot;http://elixir-lang.org/getting-started/keywords-and-maps.html#maps&quot;&gt;map&lt;/a&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;cliente&lt;/code&gt; possui as chaves &lt;code class=&quot;highlighter-rouge&quot;&gt;cartao_fidelidade&lt;/code&gt; e &lt;code class=&quot;highlighter-rouge&quot;&gt;email&lt;/code&gt;, que serão usadas para casar com os parâmetros de cada função:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-elixir&quot; data-lang=&quot;elixir&quot;&gt;&lt;span class=&quot;c1&quot;&gt;# Qual das funções casa/combina com este cliente ?&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;cliente&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;cartao_fidelidade:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;email:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;nil&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;A grande diferença entre as duas versões é que usando Pattern Matching seu código se torna explícito adotando lógicas isoladas para cada condição, este é um efeito colateral típico de linguagens funcionais.&lt;/p&gt;
+
+&lt;p&gt;No primeiro caso a complexidade é maior pois temos que lidar com o estado dos atributos do objeto &lt;code class=&quot;highlighter-rouge&quot;&gt;cliente&lt;/code&gt;, porém o que importa para o processamento da lógica são os dados, e eles devem ser explícitos.&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><category term="elixir" /><category term="functional-programming" /><summary type="html">Pattern Matching é o tipo de recurso que se leva um tempo para aprender e perceber o seu real valor. Felizmente temos vários materiais e artigos que nos ajudam nesta tarefa. Se você não tem ideia do que é Pattern Matching recomendo ler os links antes de continuar.</summary></entry><entry><title type="html">Resenha do livro Direto ao Ponto</title><link href="https://leandrocp.com.br/2016/01/resenha-livro-direto-ao-ponto/" rel="alternate" type="text/html" title="Resenha do livro Direto ao Ponto" /><published>2016-01-04T00:00:00-02:00</published><updated>2016-01-04T00:00:00-02:00</updated><id>https://leandrocp.com.br/2016/01/resenha-livro-direto-ao-ponto</id><content type="html" xml:base="https://leandrocp.com.br/2016/01/resenha-livro-direto-ao-ponto/">&lt;p&gt;Resenha do livro &lt;a href=&quot;http://www.casadocodigo.com.br/products/livro-direto-ao-ponto&quot;&gt;Direto ao Ponto - Criando produtos de forma enxuta&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Se você ou sua empresa irá iniciar um projeto ou mesmo está no meio de um projeto mas está meio perdido com todas atividades necessárias pra tirar a ideia da cabeça e disponibilizar um produto ao seu usuário final, então este livro é mais que recomendado, é praticamente obrigatório.&lt;/p&gt;
+
+&lt;p&gt;Como o próprio autor justifica, o livro traz uma receita de bolo que o ajudará a identificar a visão e objetivos do produto, personas, features e jornadas. Com estas valiosas informações, planejar as entregas enxutas, curtas e priorizadas. Em outras palavras irá te ajudar a construir um produto em etapas, o chamado MVP.&lt;/p&gt;
+
+&lt;h3 id=&quot;mas-meu-produto-é-muito-grande-ou-minha-empresa-não-é-uma-startup-&quot;&gt;Mas meu produto é muito grande ou minha empresa não é uma startup !&lt;/h3&gt;
+
+&lt;p&gt;O autor &lt;a href=&quot;http://www.caroli.org/pt/&quot;&gt;Paulo Caroli&lt;/a&gt; deixa claro no Prefácio que o livro nasceu da sua vasta experiência com muitas empresas, de startups a grandes corporações e também com o relacionamento com pessoas influentes na área. E o conteúdo do livro esclarece esta experiência, portanto é seguro dizer que este livro lhe trará benefícios, independente do tamanho ou tipo de projeto.&lt;/p&gt;
+
+&lt;h3 id=&quot;mvp&quot;&gt;MVP&lt;/h3&gt;
+
+&lt;p&gt;O livro inicia com uma explicação completa e muito didática do conceito de MVP, que pode ser resumido em:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;“Produto mínimo viável (em inglês, Minimum Viable Product ─ MVP) é a versão mais simples de um produto que pode ser disponibilizada para a validação de um pequeno conjunto de hipóteses sobre um negócio.”&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&quot;inception-enxuta&quot;&gt;Inception Enxuta&lt;/h3&gt;
+
+&lt;p&gt;Conceitos e técnicas ágeis são muito úteis para se usar no decorrer do projeto, porém fica a dúvida: como usar ? O que é preciso fazer ? Como juntar tudo e gerar resultado ?&lt;/p&gt;
+
+&lt;p&gt;E são justamente estas dificuldades que o autor demonstra como resolver de forma simples no formato de um workshop colaborativo com atividades passo-a-passo, que compreende desde a ideia do produto até o planejamento das entregas priorizadas pelo valor de negócio. É o caminho para o desenvolvimento do seu produto.&lt;/p&gt;
+
+&lt;p&gt;Você pode conferir a lista de atividades desempenhadas no workshop no &lt;a href=&quot;https://s3.amazonaws.com/casadocodigo/direto-ao-ponto/direto-ao-ponto-sumario.pdf&quot;&gt;sumário do livro&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;conclusão&quot;&gt;Conclusão&lt;/h3&gt;
+
+&lt;p&gt;O livro é de leitura fácil e com muitas fotos e desenhos para exemplificar as atividades realizadas no workshop. Inclusive o apêndice inclui um exemplo real da aplicação dos conceitos ensinados no livro.&lt;/p&gt;
+
+&lt;p&gt;É indicado para qualquer pessoa que queira organizar ou mesmo otimizar o seu processo de desenvolvimento de produtos pois o livro consegue ensinar áreas do planejamento que envolvem análise, riscos, estimativas e outras que você iria se desinteressar se fosse um livro clássico de gerenciamento de projetos.&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><category term="livros" /><summary type="html">Resenha do livro Direto ao Ponto - Criando produtos de forma enxuta</summary></entry><entry><title type="html">Entendendo blocos do Ember - Handlebars</title><link href="https://leandrocp.com.br/2015/10/entendendo-blocos-ember/" rel="alternate" type="text/html" title="Entendendo blocos do Ember - Handlebars" /><published>2015-10-23T00:00:00-02:00</published><updated>2015-10-23T00:00:00-02:00</updated><id>https://leandrocp.com.br/2015/10/entendendo-blocos-ember</id><content type="html" xml:base="https://leandrocp.com.br/2015/10/entendendo-blocos-ember/">&lt;p&gt;Componentes e helpers utilizados nas views do Ember podem receber blocos, como é o caso do &lt;code class=&quot;highlighter-rouge&quot;&gt;if&lt;/code&gt;:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;{{#if cliente.ativo}}
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;ativo&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Cliente {{cliente.nome}} está ativo&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+{{else}}
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;button&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;{{&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;action&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;ativar&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;&quot;}}&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+{{/if}}&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;O que delimita o início e fim de um blocos são os operadores &lt;code class=&quot;highlighter-rouge&quot;&gt;#&lt;/code&gt; e &lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt; prefixados ao nome do componente.
+Há casos de componentes que operam tanto com blocos como na versão sem blocos, como é o caso do &lt;code class=&quot;highlighter-rouge&quot;&gt;link-to&lt;/code&gt;:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;{{#link-to 'clientes'}}
+  Lista de Clientes
+{{/link-to}}
+
+{{link-to 'Lista de Clientes' 'clientes'}}&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Os dois formatos renderizam o seguinte HTML:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;a&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;href=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/clientes&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Lista de Clientes&lt;span class=&quot;nt&quot;&gt;&amp;lt;/a&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Como blocos funcionam nos componentes ?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Vamos fazer um pequeno componente para exemplificar:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;ember generate component mostrar-cliente&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Este comando gera os dois arquivos básicos para o funcionamento de um componente:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;O arquivo &lt;code class=&quot;highlighter-rouge&quot;&gt;.js&lt;/code&gt; onde você programa o comportament&lt;/li&gt;
+  &lt;li&gt;O arquivo &lt;code class=&quot;highlighter-rouge&quot;&gt;.hbs&lt;/code&gt; que é o template do componente&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Vamos focar no segundo. Um novo template de componente possui apenas a instrução &lt;code class=&quot;highlighter-rouge&quot;&gt;yield&lt;/code&gt;:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;c&quot;&gt;&amp;lt;!-- components/mostrar-cliente/template.hbs --&amp;gt;&lt;/span&gt;
+
+{{yield}}&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Esta instrução diz que seu componente pode receber um bloco, e que todo código do bloco será inserido neste trecho do &lt;code class=&quot;highlighter-rouge&quot;&gt;yield&lt;/code&gt;. Confuso ? Exemplo:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;c&quot;&gt;&amp;lt;!-- components/mostrar-cliente/template.hbs --&amp;gt;&lt;/span&gt;
+
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Minha lista de clientes:&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&lt;/span&gt;
+
+{{yield}}
+
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;ul&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;li&amp;gt;&lt;/span&gt;João&lt;span class=&quot;nt&quot;&gt;&amp;lt;/li&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;li&amp;gt;&lt;/span&gt;Maria&lt;span class=&quot;nt&quot;&gt;&amp;lt;/li&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/ul&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;c&quot;&gt;&amp;lt;!-- clientes/template.hbs --&amp;gt;&lt;/span&gt;
+
+{{#mostrar-cliente}}
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;p&amp;gt;&lt;/span&gt;Ordenado por nome&lt;span class=&quot;nt&quot;&gt;&amp;lt;/p&amp;gt;&lt;/span&gt;
+{{/mostrar-cliente}}&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Resulta no seguinte HTML:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;h3&amp;gt;&lt;/span&gt;Minha lista de clientes:&lt;span class=&quot;nt&quot;&gt;&amp;lt;/h3&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;p&amp;gt;&lt;/span&gt;Ordenado por nome&lt;span class=&quot;nt&quot;&gt;&amp;lt;/p&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;ul&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;li&amp;gt;&lt;/span&gt;João&lt;span class=&quot;nt&quot;&gt;&amp;lt;/li&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;li&amp;gt;&lt;/span&gt;Maria&lt;span class=&quot;nt&quot;&gt;&amp;lt;/li&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/ul&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Repare que o &lt;code class=&quot;highlighter-rouge&quot;&gt;mostra-cliente&lt;/code&gt; foi chamado com &lt;code class=&quot;highlighter-rouge&quot;&gt;#&lt;/code&gt; e &lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt;, ou seja, foi passado um bloco ao componente, que foi renderizado no &lt;code class=&quot;highlighter-rouge&quot;&gt;yield&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Mas nem sempre seu componente precisa aceitar blocos, portanto é seguro remover o &lt;code class=&quot;highlighter-rouge&quot;&gt;yield&lt;/code&gt; e assim você pode chamar seu componente pela forma simplificada sem passar um bloco:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;{{mostrar-cliente}}&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;</content><author><name>Leandro Cesquini Pereira</name></author><category term="ember" /><category term="javascript" /><summary type="html">Componentes e helpers utilizados nas views do Ember podem receber blocos, como é o caso do if:</summary></entry><entry><title type="html">Lotus DB Migrations Tips</title><link href="https://leandrocp.com.br/2015/08/lotus-migration/" rel="alternate" type="text/html" title="Lotus DB Migrations Tips" /><published>2015-08-24T00:00:00-03:00</published><updated>2015-08-24T00:00:00-03:00</updated><id>https://leandrocp.com.br/2015/08/lotus-migration</id><content type="html" xml:base="https://leandrocp.com.br/2015/08/lotus-migration/">&lt;p&gt;Lotus, just like Rails, also supports database migration through &lt;a href=&quot;http://sequel.jeremyevans.net/rdoc/files/doc/migration_rdoc.html&quot;&gt;Sequel Migrations&lt;/a&gt;.
+It´s pretty simple but some things are not so clear.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Create a migration&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;lotus g migration create_my_table&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Enable UUID (PostgreSQL only)&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Lotus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;migration&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'CREATE EXTENSION &quot;uuid-ossp&quot;'&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;down&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'DROP EXTENSION &quot;uuid-ossp&quot;'&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Use UUID as Primary Key&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Lotus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;migration&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;create_table&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:my_table&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;column&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:uuid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;null: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;default: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Sequel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:uuid_generate_v4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;primary_key: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;down&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;drop_table&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:my_table&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Use UUID as Foreign Key&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Lotus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;migration&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;create_table&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:my_table&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;column&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:uuid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;null: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;default: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Sequel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:uuid_generate_v4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;primary_key: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;foreign_key&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:author_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:authors&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;type: &lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'uuid'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;null: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Index a column&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Lotus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;migration&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;create_table&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:my_table&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;column&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:integer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;null: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;index&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:code&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Table documentation&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;no&quot;&gt;Lotus&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;migration&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;up&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;create_table&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:my_table&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;column&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:integer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;null: &lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt; &lt;span class=&quot;sx&quot;&gt;%Q(COMMENT ON TABLE my_table IS 'You should do it')&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt; &lt;span class=&quot;sx&quot;&gt;%Q(COMMENT ON COLUMN my_table.code IS 'Easy and useful')&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Migrate up&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;lotus db migrate&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;strong&gt;Migrate down&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;There´s no &lt;code class=&quot;highlighter-rouge&quot;&gt;db migrate down&lt;/code&gt; command, although you can specify a version to migrate. Just specify &lt;code class=&quot;highlighter-rouge&quot;&gt;0&lt;/code&gt; to migrate to initial version (before any migration).&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;lotus db migrate 0&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;</content><author><name>Leandro Cesquini Pereira</name></author><category term="lotus" /><category term="ruby" /><summary type="html">Lotus, just like Rails, also supports database migration through Sequel Migrations. It´s pretty simple but some things are not so clear.</summary></entry><entry><title type="html">Como rodar Docker no MacOS</title><link href="https://leandrocp.com.br/2015/06/docker-no-macos/" rel="alternate" type="text/html" title="Como rodar Docker no MacOS" /><published>2015-06-19T00:00:00-03:00</published><updated>2015-06-19T00:00:00-03:00</updated><id>https://leandrocp.com.br/2015/06/docker-no-macos</id><content type="html" xml:base="https://leandrocp.com.br/2015/06/docker-no-macos/">&lt;p&gt;&lt;a href=&quot;https://www.docker.com/&quot;&gt;Docker&lt;/a&gt; é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura.&lt;/p&gt;
+
+&lt;p&gt;O único sistema operacional suportado atualmente é o Linux, porém há formas de rodar o Docker no Mac com praticamente a mesma facilidade e performance, como veremos neste artigo.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;TL/DR&lt;/strong&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;# Instale os gerenciadores brew, cask e também o git, caso ainda não tenha:&lt;/span&gt;
+ruby &lt;span class=&quot;nt&quot;&gt;-e&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;curl &lt;span class=&quot;nt&quot;&gt;-fsSL&lt;/span&gt;
+https://raw.githubusercontent.com/Homebrew/install/master/install&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
+
+brew &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;caskroom/cask/brew-cask
+
+brew &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;git
+
+&lt;span class=&quot;c&quot;&gt;#Instale o VirtualBox&lt;/span&gt;
+brew cask &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;virtualbox
+
+&lt;span class=&quot;c&quot;&gt;# Instale o Vagrant&lt;/span&gt;
+brew cask &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;vagrant
+
+&lt;span class=&quot;c&quot;&gt;# Instale o Docker&lt;/span&gt;
+brew &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;docker
+
+&lt;span class=&quot;c&quot;&gt;# Clone o projeto com o sistema pronto&lt;/span&gt;
+git clone https://github.com/leandrocp/coreos-vagrant.git
+
+&lt;span class=&quot;nb&quot;&gt;cd &lt;/span&gt;coreos-vagrant
+
+&lt;span class=&quot;c&quot;&gt;# Inicialize o Vagrant&lt;/span&gt;
+vagrant up
+
+&lt;span class=&quot;c&quot;&gt;# Aponte o host do docker&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# Dica: coloque este comando no arquivo ~/.bashrc&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;DOCKER_HOST&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;127.0.0.1:2375
+
+&lt;span class=&quot;c&quot;&gt;# Docker rodando!&lt;/span&gt;
+docker info
+
+docker run &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; 8080:80 nginx&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Acesse http://localhost:8080/ para provar que o Docker está ativo e você acabou de executar um servidor web.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Mas como funciona ?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;A solução é simples: virtualizar um linux que possua docker, apontar o docker local para este ambiente, compartilhar arquivos e finalmente usar o Docker.&lt;/p&gt;
+
+&lt;p&gt;O projeto &lt;a href=&quot;http://boot2docker.io/&quot;&gt;boot2docker&lt;/a&gt; facilita todo esse processo, porém a performance dos arquivos compartilhados é sofrível. Por isso usamos o &lt;a href=&quot;https://coreos.com/&quot;&gt;CoreOS&lt;/a&gt;, um sistema enxuto criado com o objetivo de rodar containers.&lt;/p&gt;
+
+&lt;p&gt;Você ainda pode customizar os parâmetros do CoreOS, para isso edite o arquivo &lt;a href=&quot;https://github.com/leandrocp/coreos-vagrant/blob/master/config.rb&quot;&gt;config.rb&lt;/a&gt; que está todo explicado com comentários.&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><category term="docker" /><category term="macos" /><summary type="html">Docker é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura.</summary></entry><entry><title type="html">Ember.js - Filter By</title><link href="https://leandrocp.com.br/2015/03/emberjs-filterby/" rel="alternate" type="text/html" title="Ember.js - Filter By" /><published>2015-03-18T00:00:00-03:00</published><updated>2015-03-18T00:00:00-03:00</updated><id>https://leandrocp.com.br/2015/03/emberjs-filterby</id><content type="html" xml:base="https://leandrocp.com.br/2015/03/emberjs-filterby/">&lt;p&gt;O Ember provê muitos métodos úteis para manipulação de coleção dados (Arrays), você pode ver a lista na documentação do &lt;a href=&quot;http://emberjs.com/api/classes/Ember.Enumerable.html&quot;&gt;Enumerable&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Neste post vou explicar o funcionamento do método &lt;a href=&quot;http://emberjs.com/api/classes/Ember.Enumerable.html#method_filterBy&quot;&gt;filterBy&lt;/a&gt;, que é utilizado para filtrar um array pela chave.&lt;/p&gt;
+
+&lt;p&gt;Imagine que você tenha que filtrar todos os alunos que tiraram nota 10, com &lt;code class=&quot;highlighter-rouge&quot;&gt;filterBy&lt;/code&gt; isso é simples:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-js&quot; data-lang=&quot;js&quot;&gt;&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;alunos&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nome&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;João&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nota&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;9&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nome&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;José&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nota&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nome&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Maria&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nota&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nome&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;Pedro&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;nota&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// filterBy(key, value)&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;bonsAlunos&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;alunos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;filterBy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;nota&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// Resultado&lt;/span&gt;
+&lt;span class=&quot;cm&quot;&gt;/*
+[
+  {
+    &quot;id&quot;: 2,
+    &quot;nome&quot;: &quot;José&quot;,
+    &quot;nota&quot;: 10
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;nome&quot;: &quot;Maria&quot;,
+    &quot;nota&quot;: 10
+  }
+]
+*/&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Internamente o &lt;code class=&quot;highlighter-rouge&quot;&gt;filterBy&lt;/code&gt; vai fazer um loop em cada item do array e verificar se a &lt;code class=&quot;highlighter-rouge&quot;&gt;key&lt;/code&gt; ‘nota’ é igual ao &lt;code class=&quot;highlighter-rouge&quot;&gt;value&lt;/code&gt; 10. Para cada item que a condição for verdadeira, ele vai retornar no array &lt;code class=&quot;highlighter-rouge&quot;&gt;bonsAlunos&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Abaixo deixo um exemplo prático de como utilizar o filterBy para criar um tela com filtro:&lt;/p&gt;
+
+&lt;p&gt;&lt;a class=&quot;jsbin-embed&quot; href=&quot;http://emberjs.jsbin.com/goboca/4/embed?html,js,output&quot;&gt;JS Bin&lt;/a&gt;&lt;/p&gt;</content><author><name>Leandro Cesquini Pereira</name></author><category term="ember" /><category term="javascript" /><summary type="html">O Ember provê muitos métodos úteis para manipulação de coleção dados (Arrays), você pode ver a lista na documentação do Enumerable.</summary></entry></feed>

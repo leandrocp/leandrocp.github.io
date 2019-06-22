@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    Enforcing code quality in Elixir - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="Enforcing code quality in Elixir" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a mix alias that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading." />
+<meta property="og:description" content="Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a mix alias that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading." />
+<link rel="canonical" href="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/" />
+<meta property="og:url" content="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2019-06-07T00:00:00-03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Enforcing code quality in Elixir" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"headline":"Enforcing code quality in Elixir","dateModified":"2019-06-07T00:00:00-03:00","datePublished":"2019-06-07T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/"},"description":"Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a mix alias that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading.","@type":"BlogPosting","url":"https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/posts/zen.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>Enforcing code quality in Elixir</h1>
+            
+            <span class="meta">
+              June 07, 2019 &middot; <span class="reading-time" title="Estimated read time">
+  
+   14 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <p>Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a <em>mix alias</em> that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading.</p>
+
+<h2 id="tldr">TL;DR</h2>
+
+<p>The complete example is at the end of the article.</p>
+
+<h2 id="tools">Tools</h2>
+
+<h3 id="credo-and-dialyzer">Credo and Dialyzer</h3>
+
+<p><a href="https://github.com/rrrene/credo" rel="nofollow" target="_blank">Credo</a> is responsible for checking if the code is adherent to common good code practices established by the community. And <a href="http://erlang.org/doc/man/dialyzer.html" rel="nofollow" target="_blank">dialyzer</a> is a static analysis tool that identifies software discrepancies, such as definite type errors, code that has become dead or unreachable because of a programming error (paraphrasing the official docs), but we’ll use <a href="https://github.com/jeremyjh/dialyxir" rel="nofollow" target="_blank">dialyxir</a>, which is wrapper around dialyzer written in Elixir that simplify the use of dialyzer.</p>
+
+<h3 id="sobelow">Sobelow</h3>
+
+<p><a href="https://github.com/nccgroup/sobelow" rel="nofollow" target="_blank">Sobelow</a> is a security-focused static analysis tool for the Phoenix framework. If you’re not using Phoenix, just remove it from the deps, configs, and alias described on this article.</p>
+
+<h3 id="mix-format">mix format</h3>
+
+<p>The <a href="https://hexdocs.pm/mix/Mix.Tasks.Format.html" rel="nofollow" target="_blank">mix format</a> task was <a href="https://elixir-lang.org/blog/2018/01/17/elixir-v1-6-0-released/" rel="nofollow" target="_blank">introduced in Elixir v1.6</a>, and it’s used to format your code automatically. One of the main benefits of using it is to avoid boring and endless discussions like “how we should format the code ?”, “what should be the line length ?”, and so on. <a href="https://github.com/elixir-lang/elixir/blob/v1.8/Makefile#L215-L216" rel="nofollow" target="_blank">Elixir also uses it</a> to enforce a standard format.</p>
+
+<h3 id="warning-as-errors">Warning as errors</h3>
+
+<p>That’s not a tool, actually, it’s an <a href="https://hexdocs.pm/mix/Mix.Tasks.Compile.Elixir.html" rel="nofollow" target="_blank">Elixir compile attribute</a> that will treat warnings in the current project as errors and return a non-zero exit code, which means that your project won’t compile if it has any warning.</p>
+
+<h3 id="a-note-before-we-continue">A note before we continue</h3>
+
+<p>Having all those tools and configs turned on <em>may be</em> annoying. A module without doc, a wrong spec or even an unused variable will stop you from compiling and shipping the code. The level of enforcement is up to you, so you should adapt the tools and configs as required for your project (and your stress level). But it’s a good ideia to plan for the long term.</p>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>Ok, let’s change the files to implement the quality check. Let’s do that piece by piece, or better saying, function by function.</p>
+
+<h3 id="mixexs">mix.exs</h3>
+
+<p>First, let’s install the deps. Add the following in <em>deps list</em>:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="ss">:credo</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.0"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">},</span>
+<span class="p">{</span><span class="ss">:dialyxir</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.0.0-rc.6"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">},</span>
+<span class="p">{</span><span class="ss">:sobelow</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 0.7"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>And let’s change the project’s config. Add this to the <em>project function</em>:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">elixirc_options:</span> <span class="p">[</span><span class="ss">warnings_as_errors:</span> <span class="no">true</span><span class="p">],</span>
+<span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
+<span class="ss">dialyzer:</span> <span class="p">[</span>
+  <span class="ss">plt_file:</span> <span class="p">{</span><span class="ss">:no_warn</span><span class="p">,</span> <span class="sd">"</span><span class="s2">priv/plts/dialyzer.plt"</span><span class="p">},</span>
+  <span class="ss">ignore_warnings:</span> <span class="sd">"</span><span class="s2">.dialyzer_ignore.exs"</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<p>Which will be like:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">YourProject</span><span class="o">.</span><span class="no">MixProject</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">Mix</span><span class="o">.</span><span class="no">Project</span>
+
+  <span class="k">def</span> <span class="n">project</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="c1"># current configs...</span>
+      
+      <span class="ss">elixirc_options:</span> <span class="p">[</span><span class="ss">warnings_as_errors:</span> <span class="no">true</span><span class="p">],</span>
+      <span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
+      <span class="ss">dialyzer:</span> <span class="p">[</span>
+        <span class="ss">plt_file:</span> <span class="p">{</span><span class="ss">:no_warn</span><span class="p">,</span> <span class="sd">"</span><span class="s2">priv/plts/dialyzer.plt"</span><span class="p">},</span>
+        <span class="ss">ignore_warnings:</span> <span class="sd">"</span><span class="s2">.dialyzer_ignore.exs"</span>
+      <span class="p">]</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+
+  <span class="k">defp</span> <span class="n">deps</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="c1"># current deps...</span>
+
+      <span class="c1"># dev, test</span>
+      <span class="p">{</span><span class="ss">:credo</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.0"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:dialyxir</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.0.0-rc.6"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:sobelow</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 0.7"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">}</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>I recommend reading <a href="https://hexdocs.pm/dialyxir/0.4.1/readme.html" rel="nofollow" target="_blank">dialyxir doc</a> to know more about its config, especially the <a href="https://github.com/jeremyjh/dialyxir#continuous-integration" rel="nofollow" target="_blank">Continuous Integration</a> if you want to enforce it on your CI/CD pipeline.</p>
+
+<p>Continuing, let’s create an alias function in your mix.exs file, <em>if you don’t have this function already created</em>, and add two aliases:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defp</span> <span class="n">aliases</span> <span class="k">do</span>
+  <span class="p">[</span>
+    <span class="c1"># current aliases...</span>
+    
+    <span class="ss">quality:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">format"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">credo --strict"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">sobelow --verbose"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">dialyzer"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">test"</span><span class="p">],</span>
+    <span class="sd">"</span><span class="s2">quality.ci"</span><span class="p">:</span> <span class="p">[</span>
+      <span class="sd">"</span><span class="s2">test"</span><span class="p">,</span>
+      <span class="sd">"</span><span class="s2">format --check-formatted"</span><span class="p">,</span>
+      <span class="sd">"</span><span class="s2">credo --strict"</span><span class="p">,</span>
+      <span class="sd">"</span><span class="s2">sobelow --exit"</span><span class="p">,</span>
+      <span class="sd">"</span><span class="s2">dialyzer --halt-exit-status"</span>
+    <span class="p">]</span>
+  <span class="p">]</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>I like using one alias specific for local development (quality) and one for CI/CD (quality.ci) because I have more freedom on the order of the tasks and its arguments. For example, on local development I don’t want to check if the code is formatted, I just format the code directly; and I like to see test results at the end. Adapt as you want.</p>
+
+<h3 id="dialyzer_ignoreexs">.dialyzer_ignore.exs</h3>
+
+<p>Create the file <em>.dialyzer_ignore.exs</em> in the root dir of the project:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span>
+  <span class="p">{</span><span class="sd">"</span><span class="s2">:0:unknown_function Function ExUnit.Callbacks.__merge__/3 does not exist."</span><span class="p">},</span>
+  <span class="p">{</span><span class="sd">"</span><span class="s2">:0:unknown_function Function ExUnit.CaseTemplate.__proxy__/2 does not exist."</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<p>Remember I said those tools may be annoying ? Specially the dialyzer. Don’t get me wrong, dialyzer is amazing and I believe you should use it, but sometimes you need to ignore a warning or two, and that’s the file where you can do that.</p>
+
+<p>About the content of this file: we’ll run our aliases on the test environment (MIX_ENV=test) and dialyzer reclaim that those functions are errors, but that’s not a big deal and let’s just ignore it.</p>
+
+<h3 id="credo">Credo</h3>
+
+<p>You don’t need to change anything in order to make credo work, but the default rules may not be suitable for your project. You can change that using a <a href="https://github.com/rrrene/credo#configuration-via-credoexs" rel="nofollow" target="_blank">.credo.exs</a> file or <a href="https://github.com/rrrene/credo#inline-configuration-via-config-comments" rel="nofollow" target="_blank">using special comments</a>.</p>
+
+<h3 id="gitignore">.gitignore</h3>
+
+<p>Add to .gitignore:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Dialyzer
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
+
+# Sobelow
+.sobelow
+</code></pre></div></div>
+
+<p>Those files are environment-dependent.</p>
+
+<h2 id="executing">Executing</h2>
+
+<p>Finally, you’re ready to go! 😅</p>
+
+<p>First, let’s create the dir where dialyzer will store plt files:</p>
+
+<p><code class="highlighter-rouge">mkdir -p priv/plts</code></p>
+
+<p>And then just execute in your terminal:</p>
+
+<p><code class="highlighter-rouge">MIX_ENV=test mix quality</code></p>
+
+<p>Take some time off and grab a coffee, the first execution will take some time to build all dialyzer artefacts, but those files will be cached, don’t worry.</p>
+
+<p>And change your CI/CD pipeline to execute:</p>
+
+<p><code class="highlighter-rouge">MIX_ENV=test mix quality.ci</code></p>
+
+<p>Whenever this command finds an issue in your code, the CI/CD pipeline will halt and return a failure.</p>
+
+<h2 id="complete-example-files">Complete example files</h2>
+
+<p><em>mix.exs</em></p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">YourProject</span><span class="o">.</span><span class="no">MixProject</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">Mix</span><span class="o">.</span><span class="no">Project</span>
+
+  <span class="k">def</span> <span class="n">project</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="ss">app:</span> <span class="ss">:your_project</span><span class="p">,</span>
+      <span class="ss">version:</span> <span class="sd">"</span><span class="s2">0.1.0"</span><span class="p">,</span>
+      <span class="ss">elixir:</span> <span class="sd">"</span><span class="s2">~&gt; 1.6"</span><span class="p">,</span>
+      <span class="ss">elixirc_paths:</span> <span class="n">elixirc_paths</span><span class="p">(</span><span class="no">Mix</span><span class="o">.</span><span class="n">env</span><span class="p">()),</span>
+      <span class="ss">elixirc_options:</span> <span class="p">[</span><span class="ss">warnings_as_errors:</span> <span class="no">true</span><span class="p">],</span>
+      <span class="ss">compilers:</span> <span class="p">[</span><span class="ss">:phoenix</span><span class="p">,</span> <span class="ss">:gettext</span><span class="p">]</span> <span class="o">++</span> <span class="no">Mix</span><span class="o">.</span><span class="n">compilers</span><span class="p">(),</span>
+      <span class="ss">start_permanent:</span> <span class="no">Mix</span><span class="o">.</span><span class="n">env</span><span class="p">()</span> <span class="o">==</span> <span class="ss">:prod</span><span class="p">,</span>
+      <span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
+      <span class="ss">deps:</span> <span class="n">deps</span><span class="p">(),</span>
+      <span class="ss">dialyzer:</span> <span class="p">[</span>
+        <span class="ss">plt_file:</span> <span class="p">{</span><span class="ss">:no_warn</span><span class="p">,</span> <span class="sd">"</span><span class="s2">priv/plts/dialyzer.plt"</span><span class="p">},</span>
+        <span class="ss">ignore_warnings:</span> <span class="sd">"</span><span class="s2">.dialyzer_ignore.exs"</span>
+      <span class="p">]</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+
+  <span class="c1"># Configuration for the OTP application.</span>
+  <span class="c1">#</span>
+  <span class="c1"># Type `mix help compile.app` for more information.</span>
+  <span class="k">def</span> <span class="n">application</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="ss">mod:</span> <span class="p">{</span><span class="no">YourProject</span><span class="o">.</span><span class="no">Application</span><span class="p">,</span> <span class="p">[]},</span>
+      <span class="ss">extra_applications:</span> <span class="p">[</span><span class="ss">:logger</span><span class="p">,</span> <span class="ss">:runtime_tools</span><span class="p">]</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+
+  <span class="c1"># Specifies which paths to compile per environment.</span>
+  <span class="k">defp</span> <span class="n">elixirc_paths</span><span class="p">(</span><span class="ss">:test</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">lib"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">test/support"</span><span class="p">]</span>
+  <span class="k">defp</span> <span class="n">elixirc_paths</span><span class="p">(</span><span class="n">_</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">lib"</span><span class="p">]</span>
+
+  <span class="c1"># Specifies your project dependencies.</span>
+  <span class="c1">#</span>
+  <span class="c1"># Type `mix help deps` for examples and options.</span>
+  <span class="k">defp</span> <span class="n">deps</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="p">{</span><span class="ss">:phoenix</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.4.3"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:phoenix_pubsub</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.1"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:phoenix_ecto</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 4.0"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:ecto_sql</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 3.0"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:postgrex</span><span class="p">,</span> <span class="sd">"</span><span class="s2">&gt;= 0.0.0"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:phoenix_html</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 2.11"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:phoenix_live_reload</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.2"</span><span class="p">,</span> <span class="ss">only:</span> <span class="ss">:dev</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:gettext</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 0.11"</span><span class="p">},</span>
+
+      <span class="c1"># dev, test</span>
+      <span class="p">{</span><span class="ss">:credo</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.0"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:dialyxir</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 1.0.0-rc.6"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:sobelow</span><span class="p">,</span> <span class="sd">"</span><span class="s2">~&gt; 0.7"</span><span class="p">,</span> <span class="ss">only:</span> <span class="p">[</span><span class="ss">:dev</span><span class="p">,</span> <span class="ss">:test</span><span class="p">],</span> <span class="ss">runtime:</span> <span class="no">false</span><span class="p">}</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+
+  <span class="c1"># Aliases are shortcuts or tasks specific to the current project.</span>
+  <span class="c1"># For example, to create, migrate and run the seeds file at once:</span>
+  <span class="c1">#</span>
+  <span class="c1">#     $ mix ecto.setup</span>
+  <span class="c1">#</span>
+  <span class="c1"># See the documentation for `Mix` for more info on aliases.</span>
+  <span class="k">defp</span> <span class="n">aliases</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="ss">quality:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">format"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">credo --strict"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">sobelow --verbose"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">dialyzer"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">test"</span><span class="p">],</span>
+      <span class="sd">"</span><span class="s2">quality.ci"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sd">"</span><span class="s2">test"</span><span class="p">,</span>
+        <span class="sd">"</span><span class="s2">format --check-formatted"</span><span class="p">,</span>
+        <span class="sd">"</span><span class="s2">credo --strict"</span><span class="p">,</span>
+        <span class="sd">"</span><span class="s2">sobelow --exit"</span><span class="p">,</span>
+        <span class="sd">"</span><span class="s2">dialyzer --halt-exit-status"</span>
+      <span class="p">],</span>
+      <span class="sd">"</span><span class="s2">ecto.setup"</span><span class="p">:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">ecto.create"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">ecto.migrate"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">run priv/repo/seeds.exs"</span><span class="p">],</span>
+      <span class="sd">"</span><span class="s2">ecto.reset"</span><span class="p">:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">ecto.drop"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">ecto.setup"</span><span class="p">],</span>
+      <span class="ss">test:</span> <span class="p">[</span><span class="sd">"</span><span class="s2">ecto.create --quiet"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">ecto.migrate"</span><span class="p">,</span> <span class="sd">"</span><span class="s2">test"</span><span class="p">]</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p><em>.dialyzer_ignore.exs</em></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[
+  {":0:unknown_function Function ExUnit.Callbacks.__merge__/3 does not exist."},
+  {":0:unknown_function Function ExUnit.CaseTemplate.__proxy__/2 does not exist."}
+  ]
+</code></pre></div></div>
+
+<p><em>.gitignore</em></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code># The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where 3rd-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Ignore package tarball (built via "mix hex.build").
+your_project-*.tar
+
+# If NPM crashes, it generates a log, let's ignore it too.
+npm-debug.log
+
+# The directory NPM downloads your dependencies sources to.
+/assets/node_modules/
+
+# Since we are building assets from assets/,
+# we ignore priv/static. You may want to comment
+# this depending on your deployment strategy.
+/priv/static/
+
+# Files matching config/*.secret.exs pattern contain sensitive
+# data and you should not commit them into version control.
+#
+# Alternatively, you may comment the line below and commit the
+# secrets files as long as you replace their contents by environment
+# variables.
+/config/*.secret.exs
+
+.elixir_ls
+
+# Dialyzer
+/priv/plts/*.plt
+/priv/plts/*.plt.hash%
+
+# Sobelow
+.sobelow
+</code></pre></div></div>
+
+<h2 id="references">References</h2>
+
+<ul>
+  <li>
+    <p><a href="https://pragprog.com/book/tvmelixir/adopting-elixir" rel="nofollow" target="_blank">Adopting Elixir - From Concept to Production</a></p>
+  </li>
+  <li>
+    <p><a href="https://blog.dnsimple.com/2018/10/elixir-dialyzer-in-ci/" rel="nofollow" target="_blank">https://blog.dnsimple.com/2018/10/elixir-dialyzer-in-ci/</a></p>
+  </li>
+</ul>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/" data-toggle="tooltip" data-placement="top" title="How to update objects inside JSONB arrays with PostgreSQL">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>

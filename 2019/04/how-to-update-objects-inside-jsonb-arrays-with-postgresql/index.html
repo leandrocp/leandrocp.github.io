@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    How to update objects inside JSONB arrays with PostgreSQL - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="How to update objects inside JSONB arrays with PostgreSQL" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="How to update a specific value on a JSONB array" />
+<meta property="og:description" content="How to update a specific value on a JSONB array" />
+<link rel="canonical" href="https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/" />
+<meta property="og:url" content="https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2019-04-15T00:00:00-03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="How to update objects inside JSONB arrays with PostgreSQL" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"headline":"How to update objects inside JSONB arrays with PostgreSQL","dateModified":"2019-04-15T00:00:00-03:00","datePublished":"2019-04-15T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/"},"description":"How to update a specific value on a JSONB array","@type":"BlogPosting","url":"https://leandrocp.com.br/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/posts/drawers.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>How to update objects inside JSONB arrays with PostgreSQL</h1>
+            
+            <span class="meta">
+              April 15, 2019 &middot; <span class="reading-time" title="Estimated read time">
+  
+   6 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <h2 id="how-to-update-a-specific-value-on-a-jsonb-array">How to update a specific value on a JSONB array</h2>
+
+<p>Let’s say you decided to store data in the database as json or jsonb and discovered that you just created new problems for yourself that you didn’t have before. You’re not alone.</p>
+
+<p>JSONB is a powerful tool, but it comes at some cost because you need to adapt the way you query and handle the data.</p>
+
+<p>And it’s not rare to load the entire jsonb object into memory, transform it using your preferred programming language, and then saving it back to the database. But, you just created another problem: performance bottlenecks and resource waste.</p>
+
+<p>In this article let’s see how to update a specific value of an object inside an array with one query.</p>
+
+<p><strong>TL;DR</strong>: the final query is at the end of the article, and you can check out a live example at <a href="https://www.db-fiddle.com/f/e8aeGk7cRNYnpjsqi1ncrs/1" rel="nofollow" target="_blank">DB Fiddle</a> to copy &amp; paste and play with.</p>
+
+<p>Suppose you’re implementing a customer screen to store dynamic contacts for each customer. Then you come up with the idea of storing the contacts as a JSONB column because they’re dynamic, and thus using a not relational data structure makes sense.</p>
+
+<p>Then you create a customers table with a JSONB contacts column and insert some data into it:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">create</span> <span class="k">table</span> <span class="n">customers</span> <span class="p">(</span><span class="n">name</span> <span class="n">varchar</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span> <span class="n">contacts</span> <span class="n">jsonb</span><span class="p">);</span>
+
+<span class="k">insert</span> <span class="k">into</span> <span class="n">customers</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">contacts</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span>
+  <span class="s1">'Jimi'</span><span class="p">,</span>
+  <span class="s1">'[
+    {"type": "phone", "value": "+1-202-555-0105"},
+    {"type": "email", "value": "jimi@gmail.com"}
+  ]'</span>
+<span class="p">);</span>
+
+<span class="k">insert</span> <span class="k">into</span> <span class="n">customers</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">contacts</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span>
+  <span class="s1">'Janis'</span><span class="p">,</span>
+  <span class="s1">'[
+	{"type": "email", "value": "janis@gmail.com"}
+   ]'</span>
+<span class="p">);</span>
+</code></pre></div></div>
+
+<p>Pretty easy right? But how can you update a specific contact for a specific customer? How to change Jimi’s email or Janis’ phone? 🤔</p>
+
+<p>Fortunately, PostgreSQL is your friend and provides the <em>jsonb_set</em> function:</p>
+
+<p><code class="highlighter-rouge">jsonb_set(target jsonb, path text[], new_value jsonb[, create_missing boolean])</code></p>
+
+<p>Given a jsonb column, you can set a new value on the specified path:</p>
+
+<p><img src="/img/posts/sql-jsonb-1.png" alt=""></p>
+
+<p><em>Reference: <a href="https://www.postgresql.org/docs/9.5/functions-json.html" rel="nofollow" target="_blank">PostgreSQL Json functions</a></em></p>
+
+<p>The above selects will return:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [{"type": "phone", "value": "+1–202–555–0105"}, {"type": "email", "value": "jimi.hendrix@gmail.com"}]
+  [{"type": "email", "value": "janis.joplin@gmail.com"}]
+</code></pre></div></div>
+
+<p>To change Jimi’s email on the contacts list, you inform the path <code class="highlighter-rouge">1, value</code> which means the second object on the array (starting at 0) and the key <strong>value</strong>. That’s the <em>path</em>. The same applies to change Janis’ email, but its email object is at index 0.</p>
+
+<p>You may be thinking: I just have to use jsonb_set on an update statement and it’s all done? That’s the idea, but that’s not enough yet.</p>
+
+<p>The problem with non-relational data is that they’re dynamic. Well, that’s one of the reasons for using JSONB but that brings a problem: see that Jimi’s email object is at index 1 and Janis’ email object is at index 0 in the array, and another customer could have a very different array with different indexes. So, how can you discover the index of each contact type? 🤔</p>
+
+<p>The answer is ordering the elements of the array and getting its index:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">select</span> <span class="k">index</span><span class="o">-</span><span class="mi">1</span> <span class="k">as</span> <span class="k">index</span>
+  <span class="k">from</span> <span class="n">customers</span>
+      <span class="p">,</span><span class="n">jsonb_array_elements</span><span class="p">(</span><span class="n">contacts</span><span class="p">)</span> <span class="k">with</span> <span class="k">ordinality</span> <span class="n">arr</span><span class="p">(</span><span class="n">contact</span><span class="p">,</span> <span class="k">index</span><span class="p">)</span>
+ <span class="k">where</span> <span class="n">contact</span><span class="o">-&gt;&gt;</span><span class="s1">'type'</span> <span class="o">=</span> <span class="s1">'email'</span>
+   <span class="k">and</span> <span class="n">name</span> <span class="o">=</span> <span class="s1">'Jimi'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>That query returns <strong>1</strong>, which is the <em>index</em> of the email object (type email) inside the contacts array of the customer Jimi.</p>
+
+<p>Now we have all the pieces of the puzzle: we know how to update a jsonb value and how to discover the index of the object to be updated.</p>
+
+<p>The only step left is the update itself. Putting it all together we have:</p>
+
+<p><img src="/img/posts/sql-jsonb-2.png" alt=""></p>
+
+<p>The most important part of this query is the <code class="highlighter-rouge">with</code> block. It’s a powerful resource, but for this example, you can think of it as a “way to store a variable” that is the <em>path</em> of the contact you need to update, which will be dynamic depending on the record.</p>
+
+<p>Let me explain a bit about this part:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="s1">'{'</span><span class="o">||</span><span class="k">index</span><span class="o">-</span><span class="mi">1</span><span class="o">||</span><span class="s1">',value}'</span><span class="p">)::</span><span class="n">text</span><span class="p">[]</span> <span class="k">as</span> <span class="n">path</span>
+</code></pre></div></div>
+
+<p>It just builds the path as <code class="highlighter-rouge">'{1, value}'</code>, but we need to convert to <code class="highlighter-rouge">text[]</code> because that’s the type expected on the <code class="highlighter-rouge">jsonb_path</code> function.</p>
+
+<h3 id="wrapping-up">Wrapping up</h3>
+
+<p>JSONB is a great and valuable tool to resolve a lot of problems. But keep in mind that you also need to query and update this kind of data. That brings a cost that you have to consider when deciding which tools you pick to use.</p>
+
+<p><em>Side note: that solution came out of a pair programming session with <a href="https://twitter.com/lcegatti" rel="nofollow" target="_blank">Lucas Cegatti</a>.</em></p>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2018/10/implementing-bounded-contexts-in-elixir/" data-toggle="tooltip" data-placement="top" title="Implementing Bounded Contexts in Elixir">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+          <a class="btn btn-primary float-right" href="/2019/06/enforcing-code-quality-in-elixir/" data-toggle="tooltip" data-placement="top" title="Enforcing code quality in Elixir">Next<span class="d-none d-md-inline">
+              Post</span> &rarr;</a>
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>

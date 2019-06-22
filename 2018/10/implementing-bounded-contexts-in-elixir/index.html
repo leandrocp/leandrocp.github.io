@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    Implementing Bounded Contexts in Elixir - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="Implementing Bounded Contexts in Elixir" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled Elixir in times of microservices, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter." />
+<meta property="og:description" content="What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled Elixir in times of microservices, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter." />
+<link rel="canonical" href="https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/" />
+<meta property="og:url" content="https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-10-25T00:00:00-03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Implementing Bounded Contexts in Elixir" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"headline":"Implementing Bounded Contexts in Elixir","dateModified":"2018-10-25T00:00:00-03:00","datePublished":"2018-10-25T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/"},"description":"What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled Elixir in times of microservices, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter.","@type":"BlogPosting","url":"https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/posts/birds.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>Implementing Bounded Contexts in Elixir</h1>
+            
+            <span class="meta">
+              October 25, 2018 &middot; <span class="reading-time" title="Estimated read time">
+  
+   18 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <p>What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled <a href="http://blog.plataformatec.com.br/2015/06/elixir-in-times-of-microservices/" rel="nofollow" target="_blank">Elixir in times of microservices</a>, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter.</p>
+
+<p><strong>TL;DR</strong></p>
+
+<ul>
+  <li>
+    <p>Create an umbrella project;</p>
+  </li>
+  <li>
+    <p>One app for each bounded context;</p>
+  </li>
+  <li>
+    <p>An app should never call internal code from another app;</p>
+  </li>
+  <li>
+    <p>Use a module on each app to act as a public API to exchange data between apps, and also to call functions to mutate data;</p>
+  </li>
+  <li>
+    <p>An app should never return its internal data structures on public apis, it should return only raw data like <em>maps</em> and <em>lists</em>;</p>
+  </li>
+</ul>
+
+<h2 id="first-of-all-whats-a-bounded-context-">First of all, what’s a Bounded Context ?</h2>
+
+<p><em>If you know nothing about it, I recommend to read <a href="https://martinfowler.com/bliki/BoundedContext.html" rel="nofollow" target="_blank">this Martin Fowler article</a> before continuing.</em></p>
+
+<p>According to the great book <a href="https://pragprog.com/book/swdddf/domain-modeling-made-functional" rel="nofollow" target="_blank">Domain Modeling Made Functional</a>:</p>
+<blockquote>
+  <p>[…] domains and subdomains in the problem space are mapped to what DDD terminology calls bounded contexts — a kind of subsystem in our implementation. Each bounded context is a mini domain model in its own right. We use the phrase bounded context instead of something like subsystem because it helps us stay focused on what’s important when we design a solution: being aware of the context and being aware of the boundaries.
+Why context? Because each context represents some specialized knowledge in the solution. Within the context, we share a common language and the design is coherent and unified. But, just as in the real world, information taken out of context can be confusing or unusable.
+Why bounded? In the real world, domains have fuzzy boundaries, but in the world of software we want to reduce coupling between separate subsystems so that they can evolve independently. We can do this using standard software practices, such as having explicit APIs between subsystems and avoiding dependencies such as shared code.</p>
+</blockquote>
+
+<p>That give us some hints on how we should implement a bounded context:</p>
+
+<ul>
+  <li>
+    <p>Should be independent</p>
+  </li>
+  <li>
+    <p>Should have an explict API to exchange data</p>
+  </li>
+  <li>
+    <p>Avoid shared code</p>
+  </li>
+</ul>
+
+<h2 id="umbrella-projects">Umbrella Projects</h2>
+
+<p>If you know the concept of <a href="https://elixir-lang.org/getting-started/mix-otp/dependencies-and-umbrella-projects.html#umbrella-projects" rel="nofollow" target="_blank">umbrella projects,</a> you may be thinking that we can implement each bounded context as applications of an umbrella project. And you’re right, but some rules are required in order to keep clean organization and avoid creating a mess that is hard to evolve.</p>
+
+<p>But what’s an umbrella project and apps ?</p>
+
+<p>An app is just a package of code, it could be a tiny library, a component, a subsystem or a full application. An ERP system can be composed of apps like Customer, Billing, Delivery and so on.</p>
+
+<p>And an umbrella project is a project composed of those apps, which lives in the same project and can be dependent on each other.</p>
+
+<p>Want to read more about it ? Go to <a href="https://8thlight.com/blog/georgina-mcfadyen/2017/05/01/elixir-umbrella-projects.html" rel="nofollow" target="_blank">Using an Elixir Umbrella</a> post.</p>
+
+<h2 id="show-me-the-code">Show me the code</h2>
+
+<p>Enough talking, let’s see how it works. And let’s use the same example from Martin Fowler article to establish an example that we can use for our system.</p>
+
+<p><img src="/img/posts/bounded_contexts.png" alt="Bounded Context example from Martin Fowler article"></p>
+
+<p><em>Bounded Context example from Martin Fowler article</em></p>
+
+<p>In this example we have 2 bounded contexts, <em>Sales</em> and <em>Support</em>, with their own rules and knowledge. Remember that each context should be independent, so let’s start by creating a new Elixir umbrella project called “SystemX” with two apps:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>➜ mix new system_x --umbrella
+➜ cd system_x/apps
+➜ mix new sales
+➜ mix new support
+</code></pre></div></div>
+
+<p>You’ll end up with the following directory structure:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>➜ tree
+.
+├── README.md
+├── apps
+│   ├── sales
+│   │   ├── README.md
+│   │   ├── config
+│   │   │   └── config.exs
+│   │   ├── lib
+│   │   │   └── sales.ex
+│   │   ├── mix.exs
+│   │   └── test
+│   │       ├── sales_test.exs
+│   │       └── test_helper.exs
+│   └── support
+│       ├── README.md
+│       ├── config
+│       │   └── config.exs
+│       ├── lib
+│       │   └── support.ex
+│       ├── mix.exs
+│       └── test
+│           ├── support_test.exs
+│           └── test_helper.exs
+├── config
+│   └── config.exs
+└── mix.exs
+</code></pre></div></div>
+
+<h3 id="entities">Entities</h3>
+
+<p>As you can see in our domain, we have the entity Customer on both Sales and Support context. That’s because each context may have specific rules or data and evolve independently, which give us leverage to modify each one of them without breaking the whole system, because it’s limited to the inner context.</p>
+
+<p>Let’s define each Customer:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># apps/sales/lib/domain/customer.ex</span>
+<span class="k">defmodule</span> <span class="no">Sales</span><span class="o">.</span><span class="no">Domain</span><span class="o">.</span><span class="no">Customer</span> <span class="k">do</span>
+  <span class="k">defstruct</span> <span class="p">[</span><span class="ss">:id</span><span class="p">,</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:address</span><span class="p">,</span> <span class="ss">:score</span><span class="p">,</span> <span class="ss">:has_support_ticket</span><span class="p">]</span>
+<span class="k">end</span>
+
+<span class="c1"># apps/support/lib/domain/customer.ex</span>
+<span class="k">defmodule</span> <span class="no">Support</span><span class="o">.</span><span class="no">Domain</span><span class="o">.</span><span class="no">Customer</span> <span class="k">do</span>
+  <span class="k">defstruct</span> <span class="p">[</span><span class="ss">:id</span><span class="p">,</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:last_ticket_id</span><span class="p">,</span> <span class="ss">:email</span><span class="p">]</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<h3 id="public-api">Public API</h3>
+
+<p>And what happens if the Sales context needs to get some information from the Customer on the Support context ? That’s when the explict API comes in handy. Let’s say we need to know if a Customer has a support ticket, then we need to ask this information for the Support context. So, let’s create the Support explicit API to return a Customer:</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># apps/support/lib/support.ex</span>
+<span class="k">defmodule</span> <span class="no">Support</span> <span class="k">do</span>
+  <span class="k">def</span> <span class="n">get_customer</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span> <span class="ow">when</span> <span class="n">is_integet</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">find</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span> <span class="c1"># get customer from db</span>
+    <span class="o">|&gt;</span> <span class="no">Map</span><span class="o">.</span><span class="n">from_struct</span><span class="p">()</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Returning a <em>map</em> instead of a <em>struct</em> is what give us loose coupling between apps. We will talk more about it in a moment.</p>
+
+<h3 id="putting-into-practice">Putting into practice</h3>
+
+<p>Now, let’s create a service in the Sales context that calculates the current customer’s score. The business rule is: It gives a higher score if the customer has no ticket support (<em>I know it’s not the best example in the world…</em>)</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># apps/sales/lib/client/support.ex</span>
+<span class="k">defmodule</span> <span class="no">Sales</span><span class="o">.</span><span class="no">Client</span><span class="o">.</span><span class="no">Support</span> <span class="k">do</span>
+  <span class="n">alias</span> <span class="no">Sales</span><span class="o">.</span><span class="no">Domain</span>
+
+  <span class="k">def</span> <span class="n">get_customer</span><span class="p">(%</span><span class="no">Domain</span><span class="o">.</span><span class="no">Customer</span><span class="p">{</span><span class="ss">id:</span> <span class="n">customer_id</span><span class="p">}</span> <span class="o">=</span> <span class="n">customer</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">customer_has_support_ticket</span> <span class="o">=</span>
+      <span class="n">customer_id</span>
+      <span class="o">|&gt;</span> <span class="no">Support</span><span class="o">.</span><span class="n">get_customer</span><span class="p">()</span>
+      <span class="o">|&gt;</span> <span class="n">has_support_ticket</span><span class="p">()</span>
+      
+    <span class="p">%</span><span class="no">Domain</span><span class="o">.</span><span class="no">Customer</span><span class="p">{</span><span class="n">customer</span> <span class="o">|</span> <span class="ss">has_support_ticket:</span> <span class="n">customer_has_support_ticket</span><span class="p">}</span>
+  <span class="k">end</span>
+
+  <span class="k">defp</span> <span class="n">has_support_ticket</span><span class="p">(%{</span><span class="ss">last_ticket_id:</span> <span class="n">last_ticket_id</span><span class="p">})</span> <span class="ow">when</span> <span class="n">is_nil</span><span class="p">(</span><span class="n">last_ticket_id</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="no">false</span>
+  <span class="k">defp</span> <span class="n">has_support_ticket</span><span class="p">(</span><span class="n">_</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="no">true</span>
+<span class="k">end</span>
+
+<span class="c1"># apps/sales/lib/service/customer.ex</span>
+<span class="k">defmodule</span> <span class="no">Sales</span><span class="o">.</span><span class="no">Service</span><span class="o">.</span><span class="no">Customer</span> <span class="k">do</span>
+  <span class="n">alias</span> <span class="no">Sales</span><span class="o">.</span><span class="no">Domain</span>
+  <span class="n">alias</span> <span class="no">Sales</span><span class="o">.</span><span class="no">Client</span>
+
+  <span class="k">def</span> <span class="n">current_score</span><span class="p">(%</span><span class="no">Domain</span><span class="o">.</span><span class="no">Customer</span><span class="p">{}</span> <span class="o">=</span> <span class="n">customer</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">customer</span> <span class="o">=</span> <span class="no">Client</span><span class="o">.</span><span class="no">Support</span><span class="o">.</span><span class="n">get_customer</span><span class="p">(</span><span class="n">customer</span><span class="p">)</span>
+
+    <span class="k">case</span> <span class="n">customer</span><span class="o">.</span><span class="n">has_support_ticket</span> <span class="k">do</span>
+      <span class="no">false</span> <span class="o">-&gt;</span> <span class="m">100</span>
+      <span class="no">true</span>  <span class="o">-&gt;</span> <span class="m">50</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Ok, there’s more than just a simple service. Let me explain.</p>
+
+<p><img src="/img/posts/contexts.png" alt="Contexts API"></p>
+
+<p><em>Apps are allowed to comunicate with each other only by a public API. Boxes in gray are for internal use only.</em></p>
+
+<p>A Customer entity in the Sales context knows nothing about support tickets, as expected because this information is of responsability of the Support context, however we need it to build our service <code class="highlighter-rouge">Sales.Service.Customer</code>.</p>
+
+<p>To overcome this lack of information in the Sales context we can ask the Support context for this information, but remember that we can’t share code between apps nor call internal code from another app. That’s the objective of a public API and the reason it can only return raw data like <em>maps</em> and <em>lists</em> instead of returning an internal <em>struct</em> from Support app.</p>
+
+<p>But we don’t want a meaningless <em>map</em> being used internally in Sales app, we actually want that our domain reflect the real life by mapping it to a <em>struct</em>, which is done in <code class="highlighter-rouge">Sales.Client.Support</code> — receives a <em>map</em>, use the information it needs and fullfill <code class="highlighter-rouge">Sales.Domain.Customer</code>. Note that in <code class="highlighter-rouge">Sales.Domain.Customer</code> we don’t keep the attribute <em>last_ticket_id</em> because we don’t care about the actual ticket id in the Sales context, we just need to know if it’s empty or not. Remember that the same entity from the real world may have different attributes according to the context.</p>
+
+<p>Converting the data structure on the boundaries makes the <em>service layer</em> cleaner and easier to write and understand because in layers below the public API we deal with validated data structures prepared for the current context, which means you don’t need to worry with dirty data, which frees us from writing conditional code.</p>
+
+<h3 id="maintenance">Maintenance</h3>
+
+<p>And there’s one more reason to do this kind of data convertion on the boundary: maintenance.</p>
+
+<p>What would happen if you used the struct <code class="highlighter-rouge">Support.Domain.Customer</code> all over your Sales context in services, domain, tests and so on… and for some reason you had to rename the attribute <em>last_ticket_id</em> to any other name ? Yeah, that’s right… you’d have to change a lot of code. But using a client allows you to handle this scenario in the client while keeping the <em>struct</em> <code class="highlighter-rouge">Sales.Domain.Customer</code> exactly the same, avoiding a major refactor. Just the client layers changes. It’s a simple example but I think it’s enough to get the ideia.</p>
+
+<p><em>How to organize the internal context code is not in the scope of this article.</em></p>
+
+<h3 id="contract">Contract</h3>
+
+<p>You may be wondering: if the public API returns a <em>map</em>, how can I know the content (contract) of this <em>map</em> ? Which attribures are present or not, which data type I should expect and so on ? And how can I know if the call was successful ? The answer is: use <a href="https://hexdocs.pm/elixir/typespecs.html" rel="nofollow" target="_blank">Typespecs</a>.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Support</span> <span class="k">do</span>
+  <span class="nv">@type</span> <span class="n">customer</span> <span class="p">::</span> <span class="p">%{</span><span class="ss">id:</span> <span class="n">integer</span><span class="p">,</span> <span class="ss">last_ticket_id:</span> <span class="n">integer</span><span class="p">}</span>
+  <span class="nv">@spec</span> <span class="n">get_customer</span><span class="p">(</span><span class="n">integer</span><span class="p">)</span> <span class="p">::</span> <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">customer</span><span class="p">}</span> <span class="o">|</span> <span class="p">{</span><span class="ss">:error</span><span class="p">,</span> <span class="n">binary</span><span class="p">}</span>
+  <span class="k">def</span> <span class="n">get_customer</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span> <span class="ow">when</span> <span class="n">is_integet</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span> <span class="k">do</span>
+    <span class="c1"># your logic here ...</span>
+    <span class="c1"># return the common pattern {:ok, data} or {:error, data}</span>
+    <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">customer</span><span class="p">}</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Typespecs is about transparency. You know what to expect from calling the function and also what that function expects as parameter. And it also has the advantage to generate an useful documentation using <a href="https://github.com/elixir-lang/ex_doc" rel="nofollow" target="_blank">ex_doc</a> library or even a live documentation by using text editors that supports that.</p>
+
+<p>However it does not enforce an “automatic data validation”, that means you can pass an <em>Integer</em> even if the typespec says that it’s expecting an <em>String</em>. To assist you in the task of obeying the contract, I recommend using <a href="https://github.com/jeremyjh/dialyxir" rel="nofollow" target="_blank">Dialyxir</a> that tool will do a static code analysis and warn you if anything is out of expected.</p>
+
+<h2 id="when-should-i-use-an-umbrella-app-">When should I use an umbrella app ?</h2>
+
+<p>Putting everything inside just one app or splitting each part into umbrella apps is a question of balance and following some rules. Creating many apps may be overkill, but it’s worth considering creating a new app in some cases:</p>
+
+<ul>
+  <li>
+    <p>That part of the system is developed by another team, be it an internal or offshore team in the same company or an outsourced team.</p>
+  </li>
+  <li>
+    <p>That part of the system is shared between more than one app. That’s a more common scenario for shared libs.</p>
+  </li>
+  <li>
+    <p>That part of the system needs to be deployed separately in another server or in a different permission schema (some are public and some are private). — <a href="https://hexdocs.pm/distillery/introduction/understanding_releases.html" rel="nofollow" target="_blank">Distillery releases</a> can help you with that.</p>
+  </li>
+  <li>
+    <p>Need to use more than one framework in the same system.</p>
+  </li>
+</ul>
+
+<p>Everything else can live in the same app perfectly.</p>
+
+<h2 id="a-note-about-umbrella-projects">A note about umbrella projects</h2>
+
+<p>An umbrella project may get out of control if you don’t follow some rules like we discussed here. Think in each app as being isolated, ie: you can remove it from umbrella without breaking too many things. That’s the reason we can’t call internal functions from another app and need to rely on a public API.</p>
+
+<p>There’s nothing in Elixir that forbids or prevents you from calling internal code from another app, instead of only using the public API. That’s a convention you’d have to adopt and always review the code to not break this rule.</p>
+
+<p>Another commom issue with umbrella projects is circular dependencies that happens when app A depends on app B and for some reason you also try to make B depends on A. Then you get a circular dependency error. You have to carefully design the <a href="https://markhneedham.com/blog/2009/03/30/ddd-recognising-relationships-between-bounded-contexts/" rel="nofollow" target="_blank">relationship between your bounded contexts</a> to avoid this situation.</p>
+
+<p>Another observation it that not everybody likes working with umbrella projects, and that’s fine. The same ideia and rules applies if you work with separated apps.</p>
+
+<p>Summing up, umbrella project sits between monolithic and microservices. And if done right, you gain the best of both worlds.</p>
+
+<h2 id="bonus-distributed-apps">Bonus: distributed apps</h2>
+
+<p>Umbrella project is a good way to start a new project and get things running, but it has <a href="https://elixir-lang.org/getting-started/mix-otp/dependencies-and-umbrella-projects.html#dont-drink-the-kool-aid" rel="nofollow" target="_blank">known issues</a> that may cause problems in the future. But don’t worry too much about it because the approach discussed here can evolve to break apart those apps into distributed apps by implementing each public API as a GenServer, which can be global registered using tools like <a href="https://github.com/bitwalker/swarm" rel="nofollow" target="_blank">Swarm</a> or <a href="https://github.com/derekkraan/horde" rel="nofollow" target="_blank">Horde</a>. But that’s subject to another post, let me know if you want to hear more about it.</p>
+
+<h2 id="what-i-didnt-say">What I didn’t say</h2>
+
+<p>Domain Types, Anti-Corruption Layers, CQRS, DTOs, Sagas, CRDT and some other techniques and patterns can be useful in this kind of architecture, but I can’t talk about everything in just one article and you <a href="https://en.wikipedia.org/wiki/Fundamental_theorem_of_software_engineering" rel="nofollow" target="_blank">may not need all of it</a>. Keep in mind the first and most important step is to organize your project to enable it to evolve in a agile way.</p>
+
+<p>Thanks <a href="https://twitter.com/eduardodeoh" rel="nofollow" target="_blank">Eduardo Hernandes</a> for the hours discussing Elixir, DDD and some crazy stuff and also for reviewing this article.</p>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2018/05/elixir-quick-reference-for-debugging-techniques/" data-toggle="tooltip" data-placement="top" title="Elixir — quick reference for debugging techniques">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+          <a class="btn btn-primary float-right" href="/2019/04/how-to-update-objects-inside-jsonb-arrays-with-postgresql/" data-toggle="tooltip" data-placement="top" title="How to update objects inside JSONB arrays with PostgreSQL">Next<span class="d-none d-md-inline">
+              Post</span> &rarr;</a>
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>

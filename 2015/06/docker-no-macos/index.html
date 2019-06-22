@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    Como rodar Docker no MacOS - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="Como rodar Docker no MacOS" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Docker é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura." />
+<meta property="og:description" content="Docker é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura." />
+<link rel="canonical" href="https://leandrocp.com.br/2015/06/docker-no-macos/" />
+<meta property="og:url" content="https://leandrocp.com.br/2015/06/docker-no-macos/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2015-06-19T00:00:00-03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Como rodar Docker no MacOS" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"headline":"Como rodar Docker no MacOS","dateModified":"2015-06-19T00:00:00-03:00","datePublished":"2015-06-19T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2015/06/docker-no-macos/"},"description":"Docker é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura.","@type":"BlogPosting","url":"https://leandrocp.com.br/2015/06/docker-no-macos/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/containers.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>Como rodar Docker no MacOS</h1>
+            
+            <span class="meta">
+              June 19, 2015 &middot; <span class="reading-time" title="Estimated read time">
+  
+   2 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <p><a href="https://www.docker.com/" rel="nofollow" target="_blank">Docker</a> é uma ferramenta para rodar aplicações em ambientes isolados, nos chamados Containers. É desta forma que empresas como Google, Twitter e muitas outras disponibilizam suas aplicações para milhões de usuários. E você também pode se beneficiar desta arquitetura.</p>
+
+<p>O único sistema operacional suportado atualmente é o Linux, porém há formas de rodar o Docker no Mac com praticamente a mesma facilidade e performance, como veremos neste artigo.</p>
+
+<p><strong>TL/DR</strong></p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c"># Instale os gerenciadores brew, cask e também o git, caso ainda não tenha:</span>
+ruby <span class="nt">-e</span> <span class="s2">"</span><span class="k">$(</span>curl <span class="nt">-fsSL</span>
+https://raw.githubusercontent.com/Homebrew/install/master/install<span class="k">)</span><span class="s2">"</span>
+
+brew <span class="nb">install </span>caskroom/cask/brew-cask
+
+brew <span class="nb">install </span>git
+
+<span class="c">#Instale o VirtualBox</span>
+brew cask <span class="nb">install </span>virtualbox
+
+<span class="c"># Instale o Vagrant</span>
+brew cask <span class="nb">install </span>vagrant
+
+<span class="c"># Instale o Docker</span>
+brew <span class="nb">install </span>docker
+
+<span class="c"># Clone o projeto com o sistema pronto</span>
+git clone https://github.com/leandrocp/coreos-vagrant.git
+
+<span class="nb">cd </span>coreos-vagrant
+
+<span class="c"># Inicialize o Vagrant</span>
+vagrant up
+
+<span class="c"># Aponte o host do docker</span>
+<span class="c"># Dica: coloque este comando no arquivo ~/.bashrc</span>
+<span class="nb">export </span><span class="nv">DOCKER_HOST</span><span class="o">=</span>127.0.0.1:2375
+
+<span class="c"># Docker rodando!</span>
+docker info
+
+docker run <span class="nt">-p</span> 8080:80 nginx</code></pre></figure>
+
+<p>Acesse http://localhost:8080/ para provar que o Docker está ativo e você acabou de executar um servidor web.</p>
+
+<p><strong>Mas como funciona ?</strong></p>
+
+<p>A solução é simples: virtualizar um linux que possua docker, apontar o docker local para este ambiente, compartilhar arquivos e finalmente usar o Docker.</p>
+
+<p>O projeto <a href="http://boot2docker.io/" rel="nofollow" target="_blank">boot2docker</a> facilita todo esse processo, porém a performance dos arquivos compartilhados é sofrível. Por isso usamos o <a href="https://coreos.com/" rel="nofollow" target="_blank">CoreOS</a>, um sistema enxuto criado com o objetivo de rodar containers.</p>
+
+<p>Você ainda pode customizar os parâmetros do CoreOS, para isso edite o arquivo <a href="https://github.com/leandrocp/coreos-vagrant/blob/master/config.rb" rel="nofollow" target="_blank">config.rb</a> que está todo explicado com comentários.</p>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2015/03/emberjs-filterby/" data-toggle="tooltip" data-placement="top" title="Ember.js - Filter By">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+          <a class="btn btn-primary float-right" href="/2015/08/lotus-migration/" data-toggle="tooltip" data-placement="top" title="Lotus DB Migrations Tips">Next<span class="d-none d-md-inline">
+              Post</span> &rarr;</a>
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>
