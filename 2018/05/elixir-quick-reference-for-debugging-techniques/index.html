@@ -117,7 +117,7 @@
 <span class="p">[</span><span class="m">1</span><span class="p">,</span> <span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">]</span>
 </code></pre></div></div>
 
-<p><a href="https://hexdocs.pm/elixir/IO.html#inspect/2" rel="nofollow" target="_blank">IO.inspect/2</a>can also be used inside pipelines because <a href="https://github.com/elixir-lang/elixir/blob/v1.6.5/lib/elixir/lib/io.ex#L311" rel="nofollow" target="_blank">it returns the item passed to be inspected</a>. And the tip here is to use the option label:to output a string identifying each inspect:</p>
+<p><a href="https://hexdocs.pm/elixir/IO.html#inspect/2" rel="nofollow" target="_blank">IO.inspect/2</a> can also be used inside pipelines because <a href="https://github.com/elixir-lang/elixir/blob/v1.6.5/lib/elixir/lib/io.ex#L311" rel="nofollow" target="_blank">it returns the item passed to be inspected</a>. And the tip here is to use the option <code class="highlighter-rouge">label:</code> to output a string identifying each inspect:</p>
 
 <div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="m">1</span><span class="p">,</span> <span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">]</span>
 <span class="o">|&gt;</span> <span class="no">IO</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="ss">label:</span> <span class="sd">"</span><span class="s2">before"</span><span class="p">)</span>
@@ -176,7 +176,7 @@
 
 <h2 id="iexpry">IEx.pry</h2>
 
-<p>But it can be very tedious and be limiting to debug with just data inspection likeIO.inspect or apex, that’s when <a href="https://hexdocs.pm/iex/IEx.html#pry/0" rel="nofollow" target="_blank">IEx.pry/0</a> comes at hand because it allows you to pry into the current code. Put the following code at the line you want to pry:</p>
+<p>But it can be very tedious and limiting to debug with just data inspection like <code class="highlighter-rouge">IO.inspect</code> or <code class="highlighter-rouge">apex</code>, that’s when <a href="https://hexdocs.pm/iex/IEx.html#pry/0" rel="nofollow" target="_blank">IEx.pry/0</a> comes at hand because it allows you to pry into the current code. Put the following code at the line you want to pry:</p>
 
 <div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">some_fun</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">do</span>
   <span class="kn">require</span> <span class="no">IEx</span><span class="p">;</span> <span class="no">IEx</span><span class="o">.</span><span class="n">pry</span>
@@ -184,9 +184,9 @@
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>And now execute your code inside an IEx session: iex -S mix or iex -S mix phx.server if you are using Phoenix Framework. Tip: if you are running tasks like database seeds, you can pry into that code by running iex -S mix run priv/repo/seeds.exs or any other script.</p>
+<p>And now execute your code inside an IEx session: <code class="highlighter-rouge">iex -S mix</code> or <code class="highlighter-rouge">iex -S mix phx.server</code> if you are using Phoenix Framework. Tip: if you are running tasks like database seeds, you can pry into that code by running <code class="highlighter-rouge">iex -S mix run priv/repo/seeds.exs</code> or any other script.</p>
 
-<p>Once the code execution gets to the point of IEx.pry , an interactive shell opens and allow you to interact with the current code.</p>
+<p>Once the code execution gets to the point of <code class="highlighter-rouge">IEx.pry</code>, an interactive shell opens and allow you to interact with the current code.</p>
 
 <p>Go to <a href="https://medium.com/@diamondgfx/debugging-phoenix-with-iex-pry-5417256e1d11" rel="nofollow" target="_blank">Debugging Phoenix with IEx.pry</a> if you want more tips about debugging Phoenix with IEx.pry.</p>
 
@@ -196,7 +196,7 @@
 
 <p><img src="http://blog.plataformatec.com.br/wp-content/uploads/2016/04/debugger-elixir.gif" alt="gif from http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang/)"></p>
 
-<p>gif from <a href="http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang" rel="nofollow" target="_blank">http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang</a></p>
+<p><em>gif from <a href="http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang" rel="nofollow" target="_blank">http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang</a></em></p>
 
 <p>To open this debugger, you need to start it and set a break point:</p>
 
@@ -225,7 +225,7 @@
 
 <h2 id="sysget_state-and-sysget_status">:sys.get_state and :sys.get_status</h2>
 
-<p>This one works only for processes. As the name suggests, <a href="http://erlang.org/doc/man/sys.html#get_state-1" rel="nofollow" target="_blank">:sys.get_state/1</a>gets the current state of a process, and not only from a GenServer but also from any kind of process:</p>
+<p>This one works only for processes. As the name suggests, <a href="http://erlang.org/doc/man/sys.html#get_state-1" rel="nofollow" target="_blank">:sys.get_state/1</a> gets the current state of a process, and not only from a GenServer but also from any kind of process:</p>
 
 <div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iex</span><span class="p">(</span><span class="m">1</span><span class="p">)</span><span class="o">&gt;</span> <span class="k">defmodule</span> <span class="no">Example</span><span class="p">,</span> <span class="k">do</span><span class="p">:</span> <span class="kn">use</span> <span class="no">GenServer</span>
 <span class="n">iex</span><span class="p">(</span><span class="m">2</span><span class="p">)</span><span class="o">&gt;</span> <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">pid</span><span class="p">}</span> <span class="o">=</span> <span class="no">GenServer</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="no">Example</span><span class="p">,</span> <span class="p">%{</span><span class="ss">ping:</span> <span class="sd">"</span><span class="s2">pong"</span><span class="p">})</span>
@@ -233,17 +233,13 @@
 <span class="p">%{</span><span class="ss">ping:</span> <span class="sd">"</span><span class="s2">pong"</span><span class="p">}</span>
 </code></pre></div></div>
 
-<p>Snippet extracted from <a href="https://til.hashrocket.com/posts/urmxev1dh5-looking-at-the-state-of-processes-in-elixir" rel="nofollow" target="_blank">Looking at the state of processes in Elixir</a>.</p>
+<p><em>Snippet extracted from <a href="https://til.hashrocket.com/posts/urmxev1dh5-looking-at-the-state-of-processes-in-elixir" rel="nofollow" target="_blank">Looking at the state of processes in Elixir</a>.</em></p>
 
-<p>If you need more data than just the current state, just call <a href="http://erlang.org/doc/man/sys.html#get_status-1" rel="nofollow" target="_blank">:sys.get_status/1</a> , which will return whole process information:</p>
+<p>If you need more data than just the current state, just call <a href="http://erlang.org/doc/man/sys.html#get_status-1" rel="nofollow" target="_blank">:sys.get_status/1</a>, which will return whole process information:</p>
 
-<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-<span class="c1"># Excerpt From: Dave Thomas. “Programming Elixir ≥ 1.6"</span>
-</code></pre></div></div>
+<script src="https://gist.github.com/leandrocp/89a546380e614a6f230e90a83d39facf.js"></script>
 
-<p>Snnipet extracted from <a href="https://pragprog.com/book/elixir/programming-elixir" rel="nofollow" target="_blank">Programming Elixir book</a>.</p>
-
-<p>Bonus: you can replace a process state at runtime using <a href="http://erlang.org/doc/man/sys.html#replace_state-2" rel="nofollow" target="_blank">:sys.replace_state/2</a> , which can be very handy to test some specific situation.</p>
+<p>Bonus: you can replace a process state at runtime using <a href="http://erlang.org/doc/man/sys.html#replace_state-2" rel="nofollow" target="_blank">:sys.replace_state/2</a>, which can be very handy to test some specific situation.</p>
 
 <h2 id="processinfo">Process.info</h2>
 
@@ -284,7 +280,7 @@
 
 <h2 id="systrace">:sys.trace</h2>
 
-<p>Still talking about process debug, another resource we have is <a href="http://erlang.org/doc/man/sys.html#trace-2" rel="nofollow" target="_blank">:sys.trace/2</a>to trace process calls, which will display each call and state change of the calling process:</p>
+<p>Still talking about process debug, another resource we have is <a href="http://erlang.org/doc/man/sys.html#trace-2" rel="nofollow" target="_blank">:sys.trace/2</a> to trace process calls, which will display each call and state change of the calling process:</p>
 
 <div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">iex</span><span class="o">&gt;</span> <span class="ss">:sys</span><span class="o">.</span><span class="n">trace</span> <span class="n">pid</span><span class="p">,</span> <span class="no">true</span>
 <span class="ss">:ok</span>

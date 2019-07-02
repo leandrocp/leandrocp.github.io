@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.5">Jekyll</generator><link href="https://leandrocp.com.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://leandrocp.com.br/" rel="alternate" type="text/html" /><updated>2019-06-22T18:14:07-03:00</updated><id>https://leandrocp.com.br/feed.xml</id><title type="html">Leandro Cesquini Pereira</title><subtitle>Software Engineer and Open Source contributor</subtitle><author><name>Leandro Cesquini Pereira</name></author><entry><title type="html">Enforcing code quality in Elixir</title><link href="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/" rel="alternate" type="text/html" title="Enforcing code quality in Elixir" /><published>2019-06-07T00:00:00-03:00</published><updated>2019-06-07T00:00:00-03:00</updated><id>https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir</id><content type="html" xml:base="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/">&lt;p&gt;Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a &lt;em&gt;mix alias&lt;/em&gt; that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.5">Jekyll</generator><link href="https://leandrocp.com.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://leandrocp.com.br/" rel="alternate" type="text/html" /><updated>2019-07-02T19:00:35-03:00</updated><id>https://leandrocp.com.br/feed.xml</id><title type="html">Leandro Cesquini Pereira</title><subtitle>Software Engineer and Open Source contributor</subtitle><author><name>Leandro Cesquini Pereira</name></author><entry><title type="html">Enforcing code quality in Elixir</title><link href="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/" rel="alternate" type="text/html" title="Enforcing code quality in Elixir" /><published>2019-06-07T00:00:00-03:00</published><updated>2019-06-07T00:00:00-03:00</updated><id>https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir</id><content type="html" xml:base="https://leandrocp.com.br/2019/06/enforcing-code-quality-in-elixir/">&lt;p&gt;Enforcing your Elixir code to be well formatted, with no warnings and hopefully free of bugs. I’m talking about a &lt;em&gt;mix alias&lt;/em&gt; that will check the quality of the code, and that can be used during local development and also on CI/CD pipelines to enforce the team (or yourself) to keep a clean code. But keep in mind that there’s no magic, you’re still responsible for creating a code that’s well organized, performant, without security issues, and pleasant for human reading.&lt;/p&gt;
 
 &lt;h2 id=&quot;tldr&quot;&gt;TL;DR&lt;/h2&gt;
 
@@ -668,7 +668,7 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;&lt;a href=&quot;https://hexdocs.pm/elixir/IO.html#inspect/2&quot;&gt;IO.inspect/2&lt;/a&gt;can also be used inside pipelines because &lt;a href=&quot;https://github.com/elixir-lang/elixir/blob/v1.6.5/lib/elixir/lib/io.ex#L311&quot;&gt;it returns the item passed to be inspected&lt;/a&gt;. And the tip here is to use the option label:to output a string identifying each inspect:&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://hexdocs.pm/elixir/IO.html#inspect/2&quot;&gt;IO.inspect/2&lt;/a&gt; can also be used inside pipelines because &lt;a href=&quot;https://github.com/elixir-lang/elixir/blob/v1.6.5/lib/elixir/lib/io.ex#L311&quot;&gt;it returns the item passed to be inspected&lt;/a&gt;. And the tip here is to use the option &lt;code class=&quot;highlighter-rouge&quot;&gt;label:&lt;/code&gt; to output a string identifying each inspect:&lt;/p&gt;
 
 &lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
 &lt;span class=&quot;o&quot;&gt;|&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;inspect&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;label:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;before&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
@@ -727,7 +727,7 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 
 &lt;h2 id=&quot;iexpry&quot;&gt;IEx.pry&lt;/h2&gt;
 
-&lt;p&gt;But it can be very tedious and be limiting to debug with just data inspection likeIO.inspect or apex, that’s when &lt;a href=&quot;https://hexdocs.pm/iex/IEx.html#pry/0&quot;&gt;IEx.pry/0&lt;/a&gt; comes at hand because it allows you to pry into the current code. Put the following code at the line you want to pry:&lt;/p&gt;
+&lt;p&gt;But it can be very tedious and limiting to debug with just data inspection like &lt;code class=&quot;highlighter-rouge&quot;&gt;IO.inspect&lt;/code&gt; or &lt;code class=&quot;highlighter-rouge&quot;&gt;apex&lt;/code&gt;, that’s when &lt;a href=&quot;https://hexdocs.pm/iex/IEx.html#pry/0&quot;&gt;IEx.pry/0&lt;/a&gt; comes at hand because it allows you to pry into the current code. Put the following code at the line you want to pry:&lt;/p&gt;
 
 &lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;some_fun&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
   &lt;span class=&quot;kn&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IEx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;IEx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pry&lt;/span&gt;
@@ -735,9 +735,9 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;And now execute your code inside an IEx session: iex -S mix or iex -S mix phx.server if you are using Phoenix Framework. Tip: if you are running tasks like database seeds, you can pry into that code by running iex -S mix run priv/repo/seeds.exs or any other script.&lt;/p&gt;
+&lt;p&gt;And now execute your code inside an IEx session: &lt;code class=&quot;highlighter-rouge&quot;&gt;iex -S mix&lt;/code&gt; or &lt;code class=&quot;highlighter-rouge&quot;&gt;iex -S mix phx.server&lt;/code&gt; if you are using Phoenix Framework. Tip: if you are running tasks like database seeds, you can pry into that code by running &lt;code class=&quot;highlighter-rouge&quot;&gt;iex -S mix run priv/repo/seeds.exs&lt;/code&gt; or any other script.&lt;/p&gt;
 
-&lt;p&gt;Once the code execution gets to the point of IEx.pry , an interactive shell opens and allow you to interact with the current code.&lt;/p&gt;
+&lt;p&gt;Once the code execution gets to the point of &lt;code class=&quot;highlighter-rouge&quot;&gt;IEx.pry&lt;/code&gt;, an interactive shell opens and allow you to interact with the current code.&lt;/p&gt;
 
 &lt;p&gt;Go to &lt;a href=&quot;https://medium.com/@diamondgfx/debugging-phoenix-with-iex-pry-5417256e1d11&quot;&gt;Debugging Phoenix with IEx.pry&lt;/a&gt; if you want more tips about debugging Phoenix with IEx.pry.&lt;/p&gt;
 
@@ -747,7 +747,7 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 
 &lt;p&gt;&lt;img src=&quot;http://blog.plataformatec.com.br/wp-content/uploads/2016/04/debugger-elixir.gif&quot; alt=&quot;gif from http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang/)&quot; /&gt;&lt;/p&gt;
 
-&lt;p&gt;gif from &lt;a href=&quot;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang&quot;&gt;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;gif from &lt;a href=&quot;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang&quot;&gt;http://blog.plataformatec.com.br/2016/04/debugging-techniques-in-elixir-lang&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;To open this debugger, you need to start it and set a break point:&lt;/p&gt;
 
@@ -776,7 +776,7 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 
 &lt;h2 id=&quot;sysget_state-and-sysget_status&quot;&gt;:sys.get_state and :sys.get_status&lt;/h2&gt;
 
-&lt;p&gt;This one works only for processes. As the name suggests, &lt;a href=&quot;http://erlang.org/doc/man/sys.html#get_state-1&quot;&gt;:sys.get_state/1&lt;/a&gt;gets the current state of a process, and not only from a GenServer but also from any kind of process:&lt;/p&gt;
+&lt;p&gt;This one works only for processes. As the name suggests, &lt;a href=&quot;http://erlang.org/doc/man/sys.html#get_state-1&quot;&gt;:sys.get_state/1&lt;/a&gt; gets the current state of a process, and not only from a GenServer but also from any kind of process:&lt;/p&gt;
 
 &lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;defmodule&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;
 &lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;GenServer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start_link&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;ping:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;pong&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
@@ -784,17 +784,13 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 &lt;span class=&quot;p&quot;&gt;%{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;ping:&lt;/span&gt; &lt;span class=&quot;sd&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;pong&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;Snippet extracted from &lt;a href=&quot;https://til.hashrocket.com/posts/urmxev1dh5-looking-at-the-state-of-processes-in-elixir&quot;&gt;Looking at the state of processes in Elixir&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Snippet extracted from &lt;a href=&quot;https://til.hashrocket.com/posts/urmxev1dh5-looking-at-the-state-of-processes-in-elixir&quot;&gt;Looking at the state of processes in Elixir&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
 
-&lt;p&gt;If you need more data than just the current state, just call &lt;a href=&quot;http://erlang.org/doc/man/sys.html#get_status-1&quot;&gt;:sys.get_status/1&lt;/a&gt; , which will return whole process information:&lt;/p&gt;
+&lt;p&gt;If you need more data than just the current state, just call &lt;a href=&quot;http://erlang.org/doc/man/sys.html#get_status-1&quot;&gt;:sys.get_status/1&lt;/a&gt;, which will return whole process information:&lt;/p&gt;
 
-&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-&lt;span class=&quot;c1&quot;&gt;# Excerpt From: Dave Thomas. “Programming Elixir ≥ 1.6&quot;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;script src=&quot;https://gist.github.com/leandrocp/89a546380e614a6f230e90a83d39facf.js&quot;&gt;&lt;/script&gt;
 
-&lt;p&gt;Snnipet extracted from &lt;a href=&quot;https://pragprog.com/book/elixir/programming-elixir&quot;&gt;Programming Elixir book&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Bonus: you can replace a process state at runtime using &lt;a href=&quot;http://erlang.org/doc/man/sys.html#replace_state-2&quot;&gt;:sys.replace_state/2&lt;/a&gt; , which can be very handy to test some specific situation.&lt;/p&gt;
+&lt;p&gt;Bonus: you can replace a process state at runtime using &lt;a href=&quot;http://erlang.org/doc/man/sys.html#replace_state-2&quot;&gt;:sys.replace_state/2&lt;/a&gt;, which can be very handy to test some specific situation.&lt;/p&gt;
 
 &lt;h2 id=&quot;processinfo&quot;&gt;Process.info&lt;/h2&gt;
 
@@ -835,7 +831,7 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
 
 &lt;h2 id=&quot;systrace&quot;&gt;:sys.trace&lt;/h2&gt;
 
-&lt;p&gt;Still talking about process debug, another resource we have is &lt;a href=&quot;http://erlang.org/doc/man/sys.html#trace-2&quot;&gt;:sys.trace/2&lt;/a&gt;to trace process calls, which will display each call and state change of the calling process:&lt;/p&gt;
+&lt;p&gt;Still talking about process debug, another resource we have is &lt;a href=&quot;http://erlang.org/doc/man/sys.html#trace-2&quot;&gt;:sys.trace/2&lt;/a&gt; to trace process calls, which will display each call and state change of the calling process:&lt;/p&gt;
 
 &lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;iex&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:sys&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trace&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;
 &lt;span class=&quot;ss&quot;&gt;:ok&lt;/span&gt;
