@@ -26,7 +26,7 @@
   <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
 
   <!-- Begin Jekyll SEO tag v2.6.1 -->
-<meta name="generator" content="Jekyll v3.8.5" />
+<meta name="generator" content="Jekyll v3.8.7" />
 <meta property="og:title" content="Implementing Bounded Contexts in Elixir" />
 <meta name="author" content="Leandro Cesquini Pereira" />
 <meta property="og:locale" content="en_US" />
@@ -36,13 +36,13 @@
 <meta property="og:url" content="https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/" />
 <meta property="og:site_name" content="Leandro Cesquini Pereira" />
 <meta property="og:type" content="article" />
-<meta property="article:published_time" content="2018-10-25T00:00:00-03:00" />
+<meta property="article:published_time" content="2018-10-25T00:00:00-04:00" />
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Implementing Bounded Contexts in Elixir" />
 <meta name="twitter:site" content="@leandrocesquini" />
 <meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
 <script type="application/ld+json">
-{"headline":"Implementing Bounded Contexts in Elixir","dateModified":"2018-10-25T00:00:00-03:00","datePublished":"2018-10-25T00:00:00-03:00","author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/"},"description":"What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled Elixir in times of microservices, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter.","@type":"BlogPosting","url":"https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/","@context":"https://schema.org"}</script>
+{"author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"headline":"Implementing Bounded Contexts in Elixir","dateModified":"2018-10-25T00:00:00-04:00","datePublished":"2018-10-25T00:00:00-04:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/"},"description":"What if we could write loose coupling services without the overhead of common microservices architecture? In 2015 Valim wrote an article entitled Elixir in times of microservices, where he elaborated his idea on how Elixir fits in a microservice architecture. That’s the kind of mind-blowing post that challenges us to experiment different ways to write software, and that post is my practical approach on this matter.","url":"https://leandrocp.com.br/2018/10/implementing-bounded-contexts-in-elixir/","@type":"BlogPosting","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 
@@ -272,8 +272,8 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
     <span class="n">customer</span> <span class="o">=</span> <span class="no">Client</span><span class="o">.</span><span class="no">Support</span><span class="o">.</span><span class="n">get_customer</span><span class="p">(</span><span class="n">customer</span><span class="p">)</span>
 
     <span class="k">case</span> <span class="n">customer</span><span class="o">.</span><span class="n">has_support_ticket</span> <span class="k">do</span>
-      <span class="no">false</span> <span class="o">-&gt;</span> <span class="m">100</span>
-      <span class="no">true</span>  <span class="o">-&gt;</span> <span class="m">50</span>
+      <span class="no">false</span> <span class="o">-&gt;</span> <span class="mi">100</span>
+      <span class="no">true</span>  <span class="o">-&gt;</span> <span class="mi">50</span>
     <span class="k">end</span>
   <span class="k">end</span>
 <span class="k">end</span>
@@ -421,7 +421,7 @@ Why bounded? In the real world, domains have fuzzy boundaries, but in the world 
           </li>
           
         </ul>
-        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2019</p>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2020</p>
       </div>
     </div>
   </div>

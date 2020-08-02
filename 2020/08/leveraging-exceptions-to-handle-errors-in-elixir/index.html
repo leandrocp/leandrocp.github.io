@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#4b285b">
+
+  <title>
+    Leveraging Exceptions to handle errors in Elixir - Leandro Cesquini Pereira
+    
+  </title>
+
+  <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/assets/vendor/fontawesome-free/css/all.min.css">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="alternate" type="application/rss+xml" title="Leandro Cesquini Pereira" href="/feed.xml">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon">
+
+  <!-- Begin Jekyll SEO tag v2.6.1 -->
+<meta name="generator" content="Jekyll v3.8.7" />
+<meta property="og:title" content="Leveraging Exceptions to handle errors in Elixir" />
+<meta name="author" content="Leandro Cesquini Pereira" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Returning a tagged tuple {:ok, result} | {:error, reason} is the de facto practice to handle errors in Elixir, but that may not be enough for all situations and this article will explore how to leverage Exceptions to enrich errors and the benefits of doing so." />
+<meta property="og:description" content="Returning a tagged tuple {:ok, result} | {:error, reason} is the de facto practice to handle errors in Elixir, but that may not be enough for all situations and this article will explore how to leverage Exceptions to enrich errors and the benefits of doing so." />
+<link rel="canonical" href="https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/" />
+<meta property="og:url" content="https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/" />
+<meta property="og:site_name" content="Leandro Cesquini Pereira" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-08-01T00:00:00-04:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Leveraging Exceptions to handle errors in Elixir" />
+<meta name="twitter:site" content="@leandrocesquini" />
+<meta name="twitter:creator" content="@Leandro Cesquini Pereira" />
+<script type="application/ld+json">
+{"author":{"@type":"Person","name":"Leandro Cesquini Pereira"},"headline":"Leveraging Exceptions to handle errors in Elixir","dateModified":"2020-08-01T00:00:00-04:00","datePublished":"2020-08-01T00:00:00-04:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/"},"description":"Returning a tagged tuple {:ok, result} | {:error, reason} is the de facto practice to handle errors in Elixir, but that may not be enough for all situations and this article will explore how to leverage Exceptions to enrich errors and the benefits of doing so.","url":"https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/","@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+
+
+<body>
+
+  <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand" href="/">Leandro Cesquini Pereira</a>
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      Menu
+      <i class="fa fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/posts">Posts</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Page Header -->
+
+<header class="masthead" style="background-image: url('/img/posts/exception.jpg')">
+  
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="post-heading">
+            <h1>Leveraging Exceptions to handle errors in Elixir</h1>
+            
+            <span class="meta">
+              August 01, 2020 &middot; <span class="reading-time" title="Estimated read time">
+  
+   10 mins  read
+</span>
+
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+
+        <p>Returning a tagged tuple <code class="highlighter-rouge">{:ok, result} | {:error, reason}</code> is the de facto practice to handle errors in Elixir, but that may not be enough for all situations and this article will explore how to leverage <a href="https://hexdocs.pm/elixir/Exception.html" rel="nofollow" target="_blank">Exceptions</a> to enrich errors and the benefits of doing so.</p>
+
+<p>Looks like that subject is a recurring source of discussion, as <a href="https://twitter.com/gausby" rel="nofollow" target="_blank">Martin Gausby</a> <a href="https://twitter.com/gausby/status/1283017670368145408" rel="nofollow" target="_blank">asked</a> the community how to deal with expected and unexpected errors, and turns out <a href="https://twitter.com/michalmuskala" rel="nofollow" target="_blank">Michał Muskała</a> has already <a href="https://web.archive.org/web/20180414015950/http://michal.muskala.eu/2017/02/10/error-handling-in-elixir-libraries.html#comments-whatyouhide-errors" rel="nofollow" target="_blank">introduced</a> a clever technique to handle errors that was used by <a href="https://twitter.com/whatyouhide" rel="nofollow" target="_blank">Andrea Leopardi</a> on libraries <a href="https://github.com/elixir-mint/mint/blob/9b19e09994d85b9c3af05279340cefc6c440ea67/lib/mint/http_error.ex" rel="nofollow" target="_blank">Mint</a> and <a href="https://github.com/whatyouhide/redix/blob/947a5d6f68a4b8ad0165c6b88b221a42964a5f50/lib/redix/exceptions.ex" rel="nofollow" target="_blank">Redix</a>. He <a href="https://twitter.com/whatyouhide/status/1266405013460594695" rel="nofollow" target="_blank">tweeted defending</a> that exceptions are a great return value, so let’s dig in to find out how that works.</p>
+
+<h4 id="tldr">TLDR</h4>
+
+<ul>
+  <li>Encapsulate all possible errors of a function into a custom Exception;</li>
+  <li>Leverage Exceptions message mechanism to avoid coupling;</li>
+  <li>Let the caller decide if the error is expected or not;</li>
+</ul>
+
+<h4 id="code-example">Code example:</h4>
+
+<p><strong>Error exception</strong> <em>lib/my_app/error.ex</em></p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">MyApp</span><span class="o">.</span><span class="no">Error</span> <span class="k">do</span>
+  <span class="nv">@type</span> <span class="n">t</span><span class="p">()</span> <span class="p">::</span> <span class="p">%</span><span class="bp">__MODULE__</span><span class="p">{</span>
+          <span class="ss">module:</span> <span class="n">module</span><span class="p">(),</span>
+          <span class="ss">reason:</span> <span class="n">atom</span><span class="p">(),</span>
+          <span class="ss">changeset:</span> <span class="no">Ecto</span><span class="o">.</span><span class="no">Changeset</span><span class="o">.</span><span class="n">t</span><span class="p">()</span> <span class="o">|</span> <span class="no">nil</span>
+        <span class="p">}</span>
+
+  <span class="k">defexception</span> <span class="p">[</span><span class="ss">:module</span><span class="p">,</span> <span class="ss">:reason</span><span class="p">,</span> <span class="ss">:changeset</span><span class="p">]</span>
+
+  <span class="nv">@spec</span> <span class="n">wrap</span><span class="p">(</span><span class="n">module</span><span class="p">(),</span> <span class="n">atom</span><span class="p">())</span> <span class="p">::</span> <span class="n">t</span><span class="p">()</span>
+  <span class="k">def</span> <span class="n">wrap</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">reason</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="p">%</span><span class="bp">__MODULE__</span><span class="p">{</span><span class="ss">module:</span> <span class="n">module</span><span class="p">,</span> <span class="ss">reason:</span> <span class="n">reason</span><span class="p">}</span>
+
+  <span class="nv">@spec</span> <span class="n">wrap</span><span class="p">(</span><span class="n">module</span><span class="p">(),</span> <span class="n">atom</span><span class="p">(),</span> <span class="no">Ecto</span><span class="o">.</span><span class="no">Changeset</span><span class="o">.</span><span class="n">t</span><span class="p">())</span> <span class="p">::</span> <span class="n">t</span><span class="p">()</span>
+  <span class="k">def</span> <span class="n">wrap</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">changeset</span><span class="p">)</span> <span class="k">do</span>
+    <span class="p">%</span><span class="bp">__MODULE__</span><span class="p">{</span><span class="ss">module:</span> <span class="n">module</span><span class="p">,</span> <span class="ss">reason:</span> <span class="n">reason</span><span class="p">,</span> <span class="ss">changeset:</span> <span class="n">changeset</span><span class="p">}</span>
+  <span class="k">end</span>
+
+  <span class="nv">@doc</span> <span class="sd">"""
+  Return the message for the given error.
+
+  ### Examples
+
+       iex&gt; {:error, %MyApp.Error{} = error} = do_something()
+       iex&gt; Exception.message(error)
+       "Unable to perform this action."
+
+  """</span>
+  <span class="nv">@spec</span> <span class="n">message</span><span class="p">(</span><span class="n">t</span><span class="p">())</span> <span class="p">::</span> <span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">()</span>
+  <span class="k">def</span> <span class="n">message</span><span class="p">(%</span><span class="bp">__MODULE__</span><span class="p">{</span><span class="ss">reason:</span> <span class="n">reason</span><span class="p">,</span> <span class="ss">module:</span> <span class="n">module</span><span class="p">})</span> <span class="k">do</span>
+    <span class="n">module</span><span class="o">.</span><span class="n">format_error</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p><strong>Context</strong> <em>lib/my_app/accounts.ex</em></p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">MyApp</span><span class="o">.</span><span class="no">Accounts</span> <span class="k">do</span>
+  <span class="nv">@spec</span> <span class="n">register</span><span class="p">(</span><span class="n">map</span><span class="p">())</span> <span class="p">::</span> <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="no">User</span><span class="o">.</span><span class="n">t</span><span class="p">()}</span> <span class="o">|</span> <span class="p">{</span><span class="ss">:error</span><span class="p">,</span> <span class="no">MyApp</span><span class="o">.</span><span class="no">Error</span><span class="o">.</span><span class="n">t</span><span class="p">()}</span>
+  <span class="k">def</span> <span class="n">register</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span> <span class="k">do</span>
+    <span class="c1"># simulate a function that may return more than one type of error</span>
+    <span class="k">case</span> <span class="n">has_permission?</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span> <span class="k">do</span>
+      <span class="no">true</span> <span class="o">-&gt;</span>
+        <span class="c1"># simulate that something wrong happened on register,</span>
+        <span class="c1"># and note that changeset is just a regular changeset</span>
+        <span class="no">MyApp</span><span class="o">.</span><span class="no">Error</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="bp">__MODULE__</span><span class="p">,</span> <span class="ss">:register</span><span class="p">,</span> <span class="n">changeset</span><span class="p">)</span>
+        
+      <span class="no">false</span> <span class="o">-&gt;</span>
+        <span class="c1"># another situation requires another type of error</span>
+        <span class="no">MyApp</span><span class="o">.</span><span class="no">Error</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="bp">__MODULE__</span><span class="p">,</span> <span class="ss">:insufficient_permisions</span><span class="p">)</span>
+    <span class="k">end</span> 
+    
+    <span class="c1"># and other errors could happen...</span>
+  <span class="k">end</span>
+  
+  <span class="c1"># translate the error case into a friendly message</span>
+  <span class="k">def</span> <span class="n">format_error</span><span class="p">(</span><span class="ss">:register</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="s2">"Unable to register account."</span>
+  <span class="k">def</span> <span class="n">format_error</span><span class="p">(</span><span class="ss">:insufficient_permissions</span><span class="p">),</span> <span class="k">do</span><span class="p">:</span> <span class="s2">"Unable to perform action due to insufficient permissions."</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p><strong>Caller</strong> <em>LiveView, Controller, etc</em></p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">case</span> <span class="no">MyApp</span><span class="o">.</span><span class="no">Accounts</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span> <span class="k">do</span>
+  <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">user</span><span class="p">}</span> <span class="o">-&gt;</span>
+    <span class="n">continue_happy_path</span><span class="p">()</span>
+  
+  <span class="p">{</span><span class="ss">:error</span><span class="p">,</span> <span class="n">error</span><span class="p">}</span> <span class="o">-&gt;</span>
+    <span class="n">socket</span> <span class="o">=</span>
+      <span class="n">socket</span>
+      <span class="o">|&gt;</span> <span class="n">put_flash</span><span class="p">(</span><span class="ss">:error</span><span class="p">,</span> <span class="no">Exception</span><span class="o">.</span><span class="n">message</span><span class="p">(</span><span class="n">error</span><span class="p">))</span>
+      <span class="o">|&gt;</span> <span class="n">assign</span><span class="p">(</span><span class="ss">:changeset</span><span class="p">,</span> <span class="n">error</span><span class="o">.</span><span class="n">changeset</span><span class="p">)</span>
+    
+    <span class="p">{</span><span class="ss">:noreply</span><span class="p">,</span> <span class="n">socket</span><span class="p">}</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>You may be asking, why not just return <code class="highlighter-rouge">{:error, :reason}</code> or even <code class="highlighter-rouge">{:error, "message"}</code>? First of all, try to avoid returning a string because that will complicate the pattern matching and a simple change will break your system, on the other hand returning an atom is totally fine when your function doesn’t need to deal with different errors and messages. But usually context or complex functions has more outcomes than just a single possible error, and besides that they’re usually consumed by another layer that needs to transform that error into useful feedback for the user.</p>
+
+<h4 id="some-practical-scenarios-and-benefits">Some practical scenarios and benefits</h4>
+
+<ul>
+  <li>In LiveViews or Controllers, you usually need to display a flash message to let the user know what’s happening. If you return <code class="highlighter-rouge">{:error, atom()}</code> that means you need to pattern match all possible atoms to create the proper message. With exceptions, all you need to do is to implement <code class="highlighter-rouge">format_error</code> in a single place and call <code class="highlighter-rouge">Exception.message(error)</code>.</li>
+  <li>If that same function changes current atom or adds another return value, you have to go through all places where that function is called to update the pattern match. That’s error-prone as you may miss something and the compiler won’t help here</li>
+  <li>Shared and reused messages. Think about generic errors such as authorization, system errors, and others. Those errors produce the same message everywhere, which requires duplicating the pattern match and the message definition in different places. That can be solved by relying on the expcetion message mechanism.</li>
+  <li>Cohesion. Implementing a <code class="highlighter-rouge">format_message/1</code> close to where the error happens will improve maintainability.</li>
+  <li>Transparency. By having the module and a reason in the error struct, you’ll have the origin of that error, from where it’s coming from. Stack traces won’t help when the error is expected and it’s not raised.</li>
+</ul>
+
+<h4 id="but-what-about-that-changeset-in-the-middle-of-the-error">But what about that changeset in the middle of the error?</h4>
+
+<p>Regular apps, especially web apps, depends a lot on <a href="https://hexdocs.pm/ecto/Ecto.Changeset.html" rel="nofollow" target="_blank">Changesets</a> to return feedback to users but also has to deal with complementary errors on more complex scenarios where returning just an invalid changeset isn’t enough. Suppose a function that deals with form submission but also has to call an external service, check permissions, or deal with that crazy legacy rule. Many different errors or situations may happen: the changeset may be invalid, an external service may be offline, or maybe an error happened but the changeset is valid and needs to be updated to reflect changes on the template. That would require more complex return values like adding more values on the tagged tuple, a struct to store all values, or something. A better approach is to return either <code class="highlighter-rouge">{:error, %MyApp.Error{reason: :invalid_input, changeset: changeset}}</code>, <code class="highlighter-rouge">{:error, %MyApp.Error{reason: :billing_service_offline}}</code>, or whatever is needed. All you need will be encapsulated on the exception struct. With that return, you can either display inline errors on form if the changeset is valid, call <code class="highlighter-rouge">Exception.message(error)</code> to give proper feedback for the user or update the changeset while giving feedback for the user about another error. It’s very flexible and simple.</p>
+
+<h4 id="error-is-part-of-your-application">Error is part of your application</h4>
+
+<p>You’re not limited to a generic <code class="highlighter-rouge">%MyApp.Error{reason: atom()}</code>, in fact you can implement explicit errors like <code class="highlighter-rouge">%MyApp.OfflineService{reason: atom(), status: integer()}</code> instead of <code class="highlighter-rouge">%MyApp.Error{reason: :billing_service_offline}</code> to enrich errors specific to your app’s domain. Some benefits include leveraging pattern matching for control flow, explicit errors when raising or reading your code, and encapsulate metadata about specific errors, but not limited to those benefits.</p>
+
+<h4 id="error-is-expected-or-not">Error is expected or not?</h4>
+
+<p>That depends on the caller because that usually is tied to the current situation. Suppose a function that calculates something based on a set of data, if that function is called by a Controller or LiveView probably the user is waiting for feedback, but if that function is called by an async process (mostly a background process) there’s no reason to present a message so raising to force the process to restart may be the best approach. In short, let the caller decide:</p>
+
+<ul>
+  <li>If the error is expected or needs to display feedback, call <code class="highlighter-rouge">Exception.message(error)</code>
+</li>
+  <li>If the error is not expected or there’s no way to recover from that, call <code class="highlighter-rouge">raise error</code>
+</li>
+</ul>
+
+<p>Remember that error is in fact an exception, so raising it is simple as calling <code class="highlighter-rouge">raise error</code>, but remember to <a href="https://elixir-lang.org/getting-started/try-catch-and-rescue.html#errors" rel="nofollow" target="_blank">avoid using try/rescue</a> for control flow and reserve that for situations where the function has reached the end of the line and there’s nothing else to do unless raising.</p>
+
+<h5 id="notes">Notes</h5>
+
+<p>Thanks to:</p>
+<ul>
+  <li>
+<a href="https://twitter.com/whatyouhide" rel="nofollow" target="_blank">Andrea Leopardi</a> for reviewing this article and also for giving the inspiration to write it.</li>
+  <li>
+<a href="https://twitter.com/michalmuskala" rel="nofollow" target="_blank">Michał Muskała</a> for introducing this technique.</li>
+  <li>
+<a href="https://twitter.com/eduardodeoh" rel="nofollow" target="_blank">Eduardo Hernandes</a> for giving the change to pair program and experiment.</li>
+</ul>
+
+
+        <div class="clearfix post-end">
+
+          
+          <a class="btn btn-primary float-left" href="/2019/06/enforcing-code-quality-in-elixir/" data-toggle="tooltip" data-placement="top" title="Enforcing code quality in Elixir">&larr; Previous<span class="d-none d-md-inline">
+              Post</span></a>
+          
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <ul class="list-inline text-center">
+          
+          <li class="list-inline-item">
+            <a href="https://www.linkedin.com/in/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          <li class="list-inline-item">
+            <a href="https://twitter.com/leandrocesquini">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+          
+          
+          <li class="list-inline-item">
+            <a href="https://github.com/leandrocp">
+              <span class="fa-stack fa-lg">
+                <i class="fas fa-circle fa-stack-2x"></i>
+                <i class="fab fa-github fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+          
+        </ul>
+        <p class="copyright text-muted">Copyright &copy; Leandro Cesquini Pereira 2020</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+  <script src="/assets/vendor/jquery/jquery.min.js"></script>
+<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/vendor/startbootstrap-clean-blog/js/clean-blog.min.js"></script>
+
+<script src="/assets/scripts.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60912157-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-60912157-1');
+</script>
+
+
+
+</body>
+
+</html>
