@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="https://leandrocp.com.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://leandrocp.com.br/" rel="alternate" type="text/html" /><updated>2020-09-04T11:13:53-04:00</updated><id>https://leandrocp.com.br/feed.xml</id><title type="html">Leandro Cesquini Pereira</title><subtitle>Software engineer and open-source enthusiast</subtitle><author><name>Leandro Cesquini Pereira</name></author><entry><title type="html">Leveraging Exceptions to handle errors in Elixir</title><link href="https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/" rel="alternate" type="text/html" title="Leveraging Exceptions to handle errors in Elixir" /><published>2020-08-01T00:00:00-04:00</published><updated>2020-08-01T00:00:00-04:00</updated><id>https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir</id><content type="html" xml:base="https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/">&lt;p&gt;Returning a tagged tuple &lt;code class=&quot;highlighter-rouge&quot;&gt;{:ok, result} | {:error, reason}&lt;/code&gt; is the de facto practice to handle errors in Elixir, but that may not be enough for all situations and this article will explore how to leverage &lt;a href=&quot;https://hexdocs.pm/elixir/Exception.html&quot;&gt;Exceptions&lt;/a&gt; to enrich errors and the benefits of doing so.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="https://leandrocp.com.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://leandrocp.com.br/" rel="alternate" type="text/html" /><updated>2020-09-24T10:08:02-04:00</updated><id>https://leandrocp.com.br/feed.xml</id><title type="html">Leandro Cesquini Pereira</title><subtitle>Software engineer and open-source enthusiast</subtitle><author><name>Leandro Cesquini Pereira</name></author><entry><title type="html">Leveraging Exceptions to handle errors in Elixir</title><link href="https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/" rel="alternate" type="text/html" title="Leveraging Exceptions to handle errors in Elixir" /><published>2020-08-01T00:00:00-04:00</published><updated>2020-08-01T00:00:00-04:00</updated><id>https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir</id><content type="html" xml:base="https://leandrocp.com.br/2020/08/leveraging-exceptions-to-handle-errors-in-elixir/">&lt;p&gt;Returning a tagged tuple &lt;code class=&quot;highlighter-rouge&quot;&gt;{:ok, result} | {:error, reason}&lt;/code&gt; is the de facto practice to handle errors in Elixir, but that may not be enough for all situations and this article will explore how to leverage &lt;a href=&quot;https://hexdocs.pm/elixir/Exception.html&quot;&gt;Exceptions&lt;/a&gt; to enrich errors and the benefits of doing so.&lt;/p&gt;
 
 &lt;p&gt;Looks like that subject is a recurring source of discussion, as &lt;a href=&quot;https://twitter.com/gausby&quot;&gt;Martin Gausby&lt;/a&gt; &lt;a href=&quot;https://twitter.com/gausby/status/1283017670368145408&quot;&gt;asked&lt;/a&gt; the community how to deal with expected and unexpected errors, and turns out &lt;a href=&quot;https://twitter.com/michalmuskala&quot;&gt;Michał Muskała&lt;/a&gt; has already &lt;a href=&quot;https://web.archive.org/web/20180414015950/http://michal.muskala.eu/2017/02/10/error-handling-in-elixir-libraries.html#comments-whatyouhide-errors&quot;&gt;introduced&lt;/a&gt; a clever technique to handle errors that was used by &lt;a href=&quot;https://twitter.com/whatyouhide&quot;&gt;Andrea Leopardi&lt;/a&gt; on libraries &lt;a href=&quot;https://github.com/elixir-mint/mint/blob/9b19e09994d85b9c3af05279340cefc6c440ea67/lib/mint/http_error.ex&quot;&gt;Mint&lt;/a&gt; and &lt;a href=&quot;https://github.com/whatyouhide/redix/blob/947a5d6f68a4b8ad0165c6b88b221a42964a5f50/lib/redix/exceptions.ex&quot;&gt;Redix&lt;/a&gt;. He &lt;a href=&quot;https://twitter.com/whatyouhide/status/1266405013460594695&quot;&gt;tweeted defending&lt;/a&gt; that exceptions are a great return value, so let’s dig in to find out how that works.&lt;/p&gt;
 
@@ -171,11 +171,14 @@
 
 &lt;p&gt;And let’s change the project’s config. Add this to the &lt;em&gt;project function&lt;/em&gt;:&lt;/p&gt;
 
-&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;ss&quot;&gt;elixirc_options:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;warnings_as_errors:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
-&lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
+&lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
 &lt;span class=&quot;ss&quot;&gt;dialyzer:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
   &lt;span class=&quot;ss&quot;&gt;plt_file:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:no_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;priv/plts/dialyzer.plt&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
   &lt;span class=&quot;ss&quot;&gt;ignore_warnings:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;.dialyzer_ignore.exs&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+&lt;span class=&quot;ss&quot;&gt;preferred_cli_env:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
@@ -188,13 +191,15 @@
     &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
       &lt;span class=&quot;c1&quot;&gt;# current configs...&lt;/span&gt;
       
-      &lt;span class=&quot;ss&quot;&gt;elixirc_options:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;warnings_as_errors:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;dialyzer:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
         &lt;span class=&quot;ss&quot;&gt;plt_file:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:no_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;priv/plts/dialyzer.plt&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
         &lt;span class=&quot;ss&quot;&gt;ignore_warnings:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;.dialyzer_ignore.exs&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;preferred_cli_env:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;
       &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
   &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
 
   &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deps&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
@@ -217,20 +222,28 @@
 &lt;div class=&quot;language-elixir highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
   &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
     &lt;span class=&quot;c1&quot;&gt;# current aliases...&lt;/span&gt;
-    
-    &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;format&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;sobelow --verbose&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
-    &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+
+    &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;compile --all-warnings --warnings-as-errors&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;s2&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;format&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;sobelow --verbose&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer --ignore-exit-status&quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;compile --all-warnings --warnings-as-errors&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;test --slowest 10&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;s2&quot;&gt;&quot;format --check-formatted&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;s2&quot;&gt;&quot;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;s2&quot;&gt;&quot;sobelow --exit&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-      &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer --halt-exit-status&quot;&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer&quot;&lt;/span&gt;
     &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
   &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
 &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;I like using one alias specific for local development (quality) and one for CI/CD (quality.ci) because I have more freedom on the order of the tasks and its arguments. For example, on local development I don’t want to check if the code is formatted, I just format the code directly; and I like to see test results at the end. Adapt as you want.&lt;/p&gt;
+&lt;p&gt;Keep in mind that it would be better to run each step of &lt;code class=&quot;highlighter-rouge&quot;&gt;quality.ci&lt;/code&gt; task in parallel to reduce the total time of each job on CI.&lt;/p&gt;
 
 &lt;h3 id=&quot;dialyzer_ignoreexs&quot;&gt;.dialyzer_ignore.exs&lt;/h3&gt;
 
@@ -242,13 +255,17 @@
 &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;Remember I said those tools may be annoying ? Specially the dialyzer. Don’t get me wrong, dialyzer is amazing and I believe you should use it, but sometimes you need to ignore a warning or two, and that’s the file where you can do that.&lt;/p&gt;
+&lt;p&gt;Remember I said those tools may be annoying? Specially the dialyzer. Don’t get me wrong, dialyzer is amazing and I think you should use it, but sometimes you need to ignore a warning or two, and that’s the file where you can do that.&lt;/p&gt;
 
-&lt;p&gt;About the content of this file: we’ll run our aliases on the test environment (MIX_ENV=test) and dialyzer reclaim that those functions are errors, but that’s not a big deal and let’s just ignore it.&lt;/p&gt;
+&lt;p&gt;About the content of this file: we’ll run our aliases on the test environment and dialyzer complains that those functions are errors, but that’s not a big deal and let’s just ignore it.&lt;/p&gt;
 
 &lt;h3 id=&quot;credo&quot;&gt;Credo&lt;/h3&gt;
 
 &lt;p&gt;You don’t need to change anything in order to make credo work, but the default rules may not be suitable for your project. You can change that using a &lt;a href=&quot;https://github.com/rrrene/credo#configuration-via-credoexs&quot;&gt;.credo.exs&lt;/a&gt; file or &lt;a href=&quot;https://github.com/rrrene/credo#inline-configuration-via-config-comments&quot;&gt;using special comments&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;sobelow-1&quot;&gt;Sobelow&lt;/h3&gt;
+
+&lt;p&gt;The same for sobelow, you can create a &lt;a href=&quot;https://github.com/nccgroup/sobelow#configuration-files&quot;&gt;config file&lt;/a&gt; but remember to call the command as &lt;code class=&quot;highlighter-rouge&quot;&gt;sobelow --config&lt;/code&gt; to actually read configs from that file.&lt;/p&gt;
 
 &lt;h3 id=&quot;gitignore&quot;&gt;.gitignore&lt;/h3&gt;
 
@@ -274,13 +291,13 @@
 
 &lt;p&gt;And then just execute in your terminal:&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MIX_ENV=test mix quality&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;mix quality&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;Take some time off and grab a coffee, the first execution will take some time to build all dialyzer artefacts, but those files will be cached, don’t worry.&lt;/p&gt;
 
 &lt;p&gt;And change your CI/CD pipeline to execute:&lt;/p&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;MIX_ENV=test mix quality.ci&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;mix quality.ci&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;Whenever this command finds an issue in your code, the CI/CD pipeline will halt and return a failure.&lt;/p&gt;
 
@@ -297,7 +314,6 @@
       &lt;span class=&quot;ss&quot;&gt;version:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;0.1.0&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;elixir:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;~&amp;gt; 1.6&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;elixirc_paths:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;elixirc_paths&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()),&lt;/span&gt;
-      &lt;span class=&quot;ss&quot;&gt;elixirc_options:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;warnings_as_errors:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;compilers:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:phoenix&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:gettext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;compilers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;start_permanent:&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Mix&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:prod&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
       &lt;span class=&quot;ss&quot;&gt;aliases:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;
@@ -305,6 +321,10 @@
       &lt;span class=&quot;ss&quot;&gt;dialyzer:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
         &lt;span class=&quot;ss&quot;&gt;plt_file:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:no_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;priv/plts/dialyzer.plt&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
         &lt;span class=&quot;ss&quot;&gt;ignore_warnings:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;.dialyzer_ignore.exs&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;preferred_cli_env:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:test&lt;/span&gt;
       &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
     &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
   &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
@@ -352,17 +372,24 @@
   &lt;span class=&quot;c1&quot;&gt;# See the documentation for `Mix` for more info on aliases.&lt;/span&gt;
   &lt;span class=&quot;k&quot;&gt;defp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aliases&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
     &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
-      &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;format&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;sobelow --verbose&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
-      &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;# current aliases...&lt;/span&gt;
+
+      &lt;span class=&quot;ss&quot;&gt;quality:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;compile --all-warnings --warnings-as-errors&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
         &lt;span class=&quot;s2&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;format&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;sobelow --verbose&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer --ignore-exit-status&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&quot;quality.ci&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;compile --all-warnings --warnings-as-errors&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;test --slowest 10&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
         &lt;span class=&quot;s2&quot;&gt;&quot;format --check-formatted&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
         &lt;span class=&quot;s2&quot;&gt;&quot;credo --strict&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
         &lt;span class=&quot;s2&quot;&gt;&quot;sobelow --exit&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-        &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer --halt-exit-status&quot;&lt;/span&gt;
-      &lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
-      &lt;span class=&quot;s2&quot;&gt;&quot;ecto.setup&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;ecto.create&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ecto.migrate&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;run priv/repo/seeds.exs&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
-      &lt;span class=&quot;s2&quot;&gt;&quot;ecto.reset&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;ecto.drop&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ecto.setup&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
-      &lt;span class=&quot;ss&quot;&gt;test:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;ecto.create --quiet&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;ecto.migrate&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;test&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;dialyzer&quot;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
     &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
   &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
 &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
@@ -430,6 +457,12 @@ npm-debug.log
 # Sobelow
 .sobelow
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;worth-taking-a-look&quot;&gt;Worth taking a look&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/karolsluszniak/ex_check&quot;&gt;ex_check&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;h2 id=&quot;references&quot;&gt;References&lt;/h2&gt;
 

@@ -150,11 +150,14 @@
 
 <p>And let’s change the project’s config. Add this to the <em>project function</em>:</p>
 
-<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">elixirc_options:</span> <span class="p">[</span><span class="ss">warnings_as_errors:</span> <span class="no">true</span><span class="p">],</span>
-<span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
 <span class="ss">dialyzer:</span> <span class="p">[</span>
   <span class="ss">plt_file:</span> <span class="p">{</span><span class="ss">:no_warn</span><span class="p">,</span> <span class="s2">"priv/plts/dialyzer.plt"</span><span class="p">},</span>
   <span class="ss">ignore_warnings:</span> <span class="s2">".dialyzer_ignore.exs"</span>
+<span class="p">],</span>
+<span class="ss">preferred_cli_env:</span> <span class="p">[</span>
+  <span class="ss">quality:</span> <span class="ss">:test</span><span class="p">,</span>
+  <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="ss">:test</span>
 <span class="p">]</span>
 </code></pre></div></div>
 
@@ -167,13 +170,15 @@
     <span class="p">[</span>
       <span class="c1"># current configs...</span>
       
-      <span class="ss">elixirc_options:</span> <span class="p">[</span><span class="ss">warnings_as_errors:</span> <span class="no">true</span><span class="p">],</span>
       <span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
       <span class="ss">dialyzer:</span> <span class="p">[</span>
         <span class="ss">plt_file:</span> <span class="p">{</span><span class="ss">:no_warn</span><span class="p">,</span> <span class="s2">"priv/plts/dialyzer.plt"</span><span class="p">},</span>
         <span class="ss">ignore_warnings:</span> <span class="s2">".dialyzer_ignore.exs"</span>
+      <span class="p">],</span>
+      <span class="ss">preferred_cli_env:</span> <span class="p">[</span>
+        <span class="ss">quality:</span> <span class="ss">:test</span><span class="p">,</span>
+        <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="ss">:test</span>
       <span class="p">]</span>
-    <span class="p">]</span>
   <span class="k">end</span>
 
   <span class="k">defp</span> <span class="n">deps</span> <span class="k">do</span>
@@ -196,20 +201,28 @@
 <div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defp</span> <span class="n">aliases</span> <span class="k">do</span>
   <span class="p">[</span>
     <span class="c1"># current aliases...</span>
-    
-    <span class="ss">quality:</span> <span class="p">[</span><span class="s2">"format"</span><span class="p">,</span> <span class="s2">"credo --strict"</span><span class="p">,</span> <span class="s2">"sobelow --verbose"</span><span class="p">,</span> <span class="s2">"dialyzer"</span><span class="p">,</span> <span class="s2">"test"</span><span class="p">],</span>
-    <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="p">[</span>
+
+    <span class="ss">quality:</span> <span class="p">[</span>
+      <span class="s2">"compile --all-warnings --warnings-as-errors"</span><span class="p">,</span>
       <span class="s2">"test"</span><span class="p">,</span>
+      <span class="s2">"format"</span><span class="p">,</span>
+      <span class="s2">"credo --strict"</span><span class="p">,</span>
+      <span class="s2">"sobelow --verbose"</span><span class="p">,</span>
+      <span class="s2">"dialyzer --ignore-exit-status"</span>
+    <span class="p">],</span>
+    <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="p">[</span>
+      <span class="s2">"compile --all-warnings --warnings-as-errors"</span><span class="p">,</span>
+      <span class="s2">"test --slowest 10"</span><span class="p">,</span>
       <span class="s2">"format --check-formatted"</span><span class="p">,</span>
       <span class="s2">"credo --strict"</span><span class="p">,</span>
       <span class="s2">"sobelow --exit"</span><span class="p">,</span>
-      <span class="s2">"dialyzer --halt-exit-status"</span>
+      <span class="s2">"dialyzer"</span>
     <span class="p">]</span>
   <span class="p">]</span>
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>I like using one alias specific for local development (quality) and one for CI/CD (quality.ci) because I have more freedom on the order of the tasks and its arguments. For example, on local development I don’t want to check if the code is formatted, I just format the code directly; and I like to see test results at the end. Adapt as you want.</p>
+<p>Keep in mind that it would be better to run each step of <code class="highlighter-rouge">quality.ci</code> task in parallel to reduce the total time of each job on CI.</p>
 
 <h3 id="dialyzer_ignoreexs">.dialyzer_ignore.exs</h3>
 
@@ -221,13 +234,17 @@
 <span class="p">]</span>
 </code></pre></div></div>
 
-<p>Remember I said those tools may be annoying ? Specially the dialyzer. Don’t get me wrong, dialyzer is amazing and I believe you should use it, but sometimes you need to ignore a warning or two, and that’s the file where you can do that.</p>
+<p>Remember I said those tools may be annoying? Specially the dialyzer. Don’t get me wrong, dialyzer is amazing and I think you should use it, but sometimes you need to ignore a warning or two, and that’s the file where you can do that.</p>
 
-<p>About the content of this file: we’ll run our aliases on the test environment (MIX_ENV=test) and dialyzer reclaim that those functions are errors, but that’s not a big deal and let’s just ignore it.</p>
+<p>About the content of this file: we’ll run our aliases on the test environment and dialyzer complains that those functions are errors, but that’s not a big deal and let’s just ignore it.</p>
 
 <h3 id="credo">Credo</h3>
 
 <p>You don’t need to change anything in order to make credo work, but the default rules may not be suitable for your project. You can change that using a <a href="https://github.com/rrrene/credo#configuration-via-credoexs" rel="nofollow" target="_blank">.credo.exs</a> file or <a href="https://github.com/rrrene/credo#inline-configuration-via-config-comments" rel="nofollow" target="_blank">using special comments</a>.</p>
+
+<h3 id="sobelow-1">Sobelow</h3>
+
+<p>The same for sobelow, you can create a <a href="https://github.com/nccgroup/sobelow#configuration-files" rel="nofollow" target="_blank">config file</a> but remember to call the command as <code class="highlighter-rouge">sobelow --config</code> to actually read configs from that file.</p>
 
 <h3 id="gitignore">.gitignore</h3>
 
@@ -253,13 +270,13 @@
 
 <p>And then just execute in your terminal:</p>
 
-<p><code class="highlighter-rouge">MIX_ENV=test mix quality</code></p>
+<p><code class="highlighter-rouge">mix quality</code></p>
 
 <p>Take some time off and grab a coffee, the first execution will take some time to build all dialyzer artefacts, but those files will be cached, don’t worry.</p>
 
 <p>And change your CI/CD pipeline to execute:</p>
 
-<p><code class="highlighter-rouge">MIX_ENV=test mix quality.ci</code></p>
+<p><code class="highlighter-rouge">mix quality.ci</code></p>
 
 <p>Whenever this command finds an issue in your code, the CI/CD pipeline will halt and return a failure.</p>
 
@@ -276,7 +293,6 @@
       <span class="ss">version:</span> <span class="s2">"0.1.0"</span><span class="p">,</span>
       <span class="ss">elixir:</span> <span class="s2">"~&gt; 1.6"</span><span class="p">,</span>
       <span class="ss">elixirc_paths:</span> <span class="n">elixirc_paths</span><span class="p">(</span><span class="no">Mix</span><span class="o">.</span><span class="n">env</span><span class="p">()),</span>
-      <span class="ss">elixirc_options:</span> <span class="p">[</span><span class="ss">warnings_as_errors:</span> <span class="no">true</span><span class="p">],</span>
       <span class="ss">compilers:</span> <span class="p">[</span><span class="ss">:phoenix</span><span class="p">,</span> <span class="ss">:gettext</span><span class="p">]</span> <span class="o">++</span> <span class="no">Mix</span><span class="o">.</span><span class="n">compilers</span><span class="p">(),</span>
       <span class="ss">start_permanent:</span> <span class="no">Mix</span><span class="o">.</span><span class="n">env</span><span class="p">()</span> <span class="o">==</span> <span class="ss">:prod</span><span class="p">,</span>
       <span class="ss">aliases:</span> <span class="n">aliases</span><span class="p">(),</span>
@@ -284,6 +300,10 @@
       <span class="ss">dialyzer:</span> <span class="p">[</span>
         <span class="ss">plt_file:</span> <span class="p">{</span><span class="ss">:no_warn</span><span class="p">,</span> <span class="s2">"priv/plts/dialyzer.plt"</span><span class="p">},</span>
         <span class="ss">ignore_warnings:</span> <span class="s2">".dialyzer_ignore.exs"</span>
+      <span class="p">],</span>
+      <span class="ss">preferred_cli_env:</span> <span class="p">[</span>
+        <span class="ss">quality:</span> <span class="ss">:test</span><span class="p">,</span>
+        <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="ss">:test</span>
       <span class="p">]</span>
     <span class="p">]</span>
   <span class="k">end</span>
@@ -331,17 +351,24 @@
   <span class="c1"># See the documentation for `Mix` for more info on aliases.</span>
   <span class="k">defp</span> <span class="n">aliases</span> <span class="k">do</span>
     <span class="p">[</span>
-      <span class="ss">quality:</span> <span class="p">[</span><span class="s2">"format"</span><span class="p">,</span> <span class="s2">"credo --strict"</span><span class="p">,</span> <span class="s2">"sobelow --verbose"</span><span class="p">,</span> <span class="s2">"dialyzer"</span><span class="p">,</span> <span class="s2">"test"</span><span class="p">],</span>
-      <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="p">[</span>
+      <span class="c1"># current aliases...</span>
+
+      <span class="ss">quality:</span> <span class="p">[</span>
+        <span class="s2">"compile --all-warnings --warnings-as-errors"</span><span class="p">,</span>
         <span class="s2">"test"</span><span class="p">,</span>
+        <span class="s2">"format"</span><span class="p">,</span>
+        <span class="s2">"credo --strict"</span><span class="p">,</span>
+        <span class="s2">"sobelow --verbose"</span><span class="p">,</span>
+        <span class="s2">"dialyzer --ignore-exit-status"</span>
+      <span class="p">],</span>
+      <span class="s2">"quality.ci"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">"compile --all-warnings --warnings-as-errors"</span><span class="p">,</span>
+        <span class="s2">"test --slowest 10"</span><span class="p">,</span>
         <span class="s2">"format --check-formatted"</span><span class="p">,</span>
         <span class="s2">"credo --strict"</span><span class="p">,</span>
         <span class="s2">"sobelow --exit"</span><span class="p">,</span>
-        <span class="s2">"dialyzer --halt-exit-status"</span>
-      <span class="p">],</span>
-      <span class="s2">"ecto.setup"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"ecto.create"</span><span class="p">,</span> <span class="s2">"ecto.migrate"</span><span class="p">,</span> <span class="s2">"run priv/repo/seeds.exs"</span><span class="p">],</span>
-      <span class="s2">"ecto.reset"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"ecto.drop"</span><span class="p">,</span> <span class="s2">"ecto.setup"</span><span class="p">],</span>
-      <span class="ss">test:</span> <span class="p">[</span><span class="s2">"ecto.create --quiet"</span><span class="p">,</span> <span class="s2">"ecto.migrate"</span><span class="p">,</span> <span class="s2">"test"</span><span class="p">]</span>
+        <span class="s2">"dialyzer"</span>
+      <span class="p">]</span>
     <span class="p">]</span>
   <span class="k">end</span>
 <span class="k">end</span>
@@ -409,6 +436,12 @@ npm-debug.log
 # Sobelow
 .sobelow
 </code></pre></div></div>
+
+<h2 id="worth-taking-a-look">Worth taking a look</h2>
+
+<ul>
+  <li><a href="https://github.com/karolsluszniak/ex_check" rel="nofollow" target="_blank">ex_check</a></li>
+</ul>
 
 <h2 id="references">References</h2>
 
